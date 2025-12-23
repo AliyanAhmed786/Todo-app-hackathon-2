@@ -1,55 +1,89 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- SYNC IMPACT REPORT
+Version change: 1.0.0 → 1.1.0
+Modified principles: None renamed, but principles added/updated based on user input
+Added sections: Technology Stack, Constraints, Success Criteria sections
+Removed sections: None
+Templates requiring updates:
+- ✅ plan-template.md - updated Constitution Check section to reflect new principles
+- ✅ spec-template.md - no changes needed
+- ✅ tasks-template.md - no changes needed
+Follow-up TODOs: None
+-->
+
+# Todo Application Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Spec-First Workflow (NON-NEGOTIABLE)
+No manual coding—Claude Code generates all implementations. Clear, documented code following project conventions. Every feature must have a validated spec before implementation begins.
+<!-- Rationale: Ensures predictable, reproducible development outcomes and maintains quality standards -->
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Incremental Complexity
+Development follows structured progression: console → web → chatbot → Kubernetes → cloud. Each phase builds on the previous with clear deliverables and validation checkpoints.
+<!-- Rationale: Reduces risk and enables iterative value delivery -->
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Clean Code Standards
+Clean, well-documented Python (backend) and TypeScript (frontend). No hardcoded secrets—all environment variables. User data isolation at database and API levels. Comprehensive error handling and validation.
+<!-- Rationale: Maintains maintainability, security, and scalability across the codebase -->
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Technology Stack Adherence
+Strict adherence to defined technology stack per phase: Phase I: Python 3.13+, Claude Code, Spec-Kit Plus; Phase II: Next.js 16+, FastAPI, SQLModel, Neon PostgreSQL, Better Auth; Phase III: OpenAI Agents SDK, MCP SDK, OpenAI ChatKit; Phase IV: Docker, Kubernetes, Minikube, Helm Charts; Phase V: Kafka, Dapr, Azure/GCP/Oracle Cloud.
+<!-- Rationale: Ensures consistency, reduces cognitive load, and enables effective team collaboration -->
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Code Traceability
+Every code file must reference Task IDs in comments. All implementations must be linked to specs via Task IDs. Reproducible setup with complete README instructions.
+<!-- Rationale: Enables auditability, debugging, and maintenance of the development process -->
 
-### [PRINCIPLE_6_NAME]
+### Open Source Transparency
+All code in public GitHub repository. No feature without a validated spec. Every implementation linked to spec via Task IDs. Working demos showing all features. Clean, deployable code in GitHub. Specs organized in `/specs` folder with CLAUDE.md guidance.
+<!-- Rationale: Promotes accountability, collaboration, and quality assurance -->
 
+## Technology Stack
 
-[PRINCIPLE__DESCRIPTION]
+### Phase I: Foundation
+Python 3.13+, Claude Code, Spec-Kit Plus
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Phase II: Web Application
+Next.js 16+, FastAPI, SQLModel, Neon PostgreSQL, Better Auth
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### Phase III: AI Integration
+OpenAI Agents SDK, MCP SDK, OpenAI ChatKit
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### Phase IV: Containerization
+Docker, Kubernetes, Minikube, Helm Charts
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### Phase V: Cloud Deployment
+Kafka, Dapr, Azure/GCP/Oracle Cloud
+
+## Development Constraints
+
+- All code must be in public GitHub repository
+- No feature development without validated spec
+- Every code file must reference Task IDs in comments
+- Reproducible setup with complete README instructions
+- No deviations from specified tech stack
+- No hardcoded secrets—all environment variables
+- User data isolation at database and API levels
+
+## Development Workflow
+
+- Spec-first workflow using Spec-Kit Plus
+- No manual coding—Claude Code generates all implementations
+- Clear, documented code following project conventions
+- Incremental complexity: console → web → chatbot → Kubernetes → cloud
+- Every implementation linked to spec via Task IDs
+- Specs organized in `/specs` folder with CLAUDE.md guidance
+
+## Success Criteria
+
+- All 5 phases completed on schedule
+- Every implementation linked to spec via Task IDs
+- Working demos showing all features
+- Clean, deployable code in GitHub
+- Specs organized in `/specs` folder with CLAUDE.md guidance
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Constitution supersedes all other practices. Amendments require documentation, approval, and migration plan. All PRs/reviews must verify compliance. Complexity must be justified. Use CLAUDE.md for runtime development guidance.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: 2025-12-21 | **Last Amended**: 2025-12-21
