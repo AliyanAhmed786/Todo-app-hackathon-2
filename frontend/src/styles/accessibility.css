@@ -1,0 +1,159 @@
+/* Accessibility Utilities for WCAG 2.1 AA Compliance */
+
+/* Color contrast utilities (4.5:1 ratio for normal text) */
+.text-contrast-high {
+  color: #000;
+}
+
+.bg-contrast-high {
+  background-color: #fff;
+}
+
+.text-contrast-medium {
+  color: #333;
+}
+
+/* Focus visibility (WCAG 2.4.7) */
+.focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.focus-visible-error {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+.focus-visible-success {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Name, Role, Value utilities (WCAG 4.1.2) */
+/* These are implemented through proper HTML attributes and ARIA labels */
+.role-button {
+  cursor: pointer;
+  user-select: none;
+}
+
+.role-link {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Visible when focused for accessibility */
+.sr-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .contrast-enhanced {
+    border: 2px solid;
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animation-disabled,
+  .transition-disabled {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-property: none !important;
+  }
+}
+
+/* Large text support */
+@media (min-resolution: 192dpi) {
+  .high-dpi {
+    font-size: 1.2em;
+  }
+}
+
+/* Dark mode accessibility */
+@media (prefers-color-scheme: dark) {
+  .dark\:accessible {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+
+  .dark\:accessible a {
+    color: #60a5fa;
+  }
+
+  .dark\:accessible a:hover {
+    color: #93c5fd;
+  }
+}
+
+/* Ensure minimum touch target size */
+.min-touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Accessible form elements */
+.accessible-input {
+  padding: 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.accessible-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.accessible-input.error {
+  border-color: #ef4444;
+}
+
+.accessible-input.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}

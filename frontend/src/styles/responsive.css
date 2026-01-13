@@ -1,0 +1,80 @@
+/* Responsive Design Utilities */
+
+/* Minimum touch target size (44x44px minimum) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+
+/* Responsive button sizes */
+.btn-touch {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 12px 16px;
+  font-size: 16px;
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+  .btn-touch {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 14px 20px;
+  }
+
+  /* Ensure links have adequate touch targets */
+  .link-touch {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  /* Spacing for mobile touch targets */
+  .touch-spacing {
+    margin: 4px;
+  }
+}
+
+/* Tablet responsive */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .btn-touch {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+}
+
+/* Desktop responsive */
+@media (min-width: 1025px) {
+  .btn-touch {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+}
+
+/* Focus indicators for accessibility */
+.focus-indicator:focus {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .high-contrast {
+    border: 2px solid;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,473 @@
+openapi: 3.0.3
+info:
+  title: Multi-User Todo Application API
+  description: API for managing user tasks in a multi-user todo application
+  version: 1.0.0
+  contact:
+    name: Todo App Development Team
+    email: support@todoapp.example.com
+
+servers:
+  - url: https://api.todoapp.example.com
+    description: Production server
+  - url: https://staging-api.todoapp.example.com
+    description: Staging server
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /auth/signup:
+    post:
+      summary: Register a new user
+      description: Creates a new user account with email and password
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User successfully registered, returns JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error (invalid email format, password too weak, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Login user
+      description: Authenticates user with email and password, returns JWT token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: User successfully authenticated, returns JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: Logs out the current user and invalidates session
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+        '401':
+          description: Invalid or expired token
+
+  /auth/refresh:
+    post:
+      summary: Refresh JWT token
+      description: Refreshes the current JWT token before expiry
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired token
+
+  /api/{user_id}/tasks:
+    get:
+      summary: Get user's tasks
+      description: Retrieves all tasks for the specified user
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID to retrieve tasks for
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of tasks to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of tasks to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: integer
+        '401':
+          description: Invalid or expired token
+        '403':
+          description: User is not authorized to access these tasks
+        '404':
+          description: User not found
+
+    post:
+      summary: Create a new task
+      description: Creates a new task for the specified user
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID to create task for
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Invalid or expired token
+        '403':
+          description: User is not authorized to create tasks for this user
+        '422':
+          description: Validation error (title too long, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/{user_id}/tasks/{id}:
+    get:
+      summary: Get a specific task
+      description: Retrieves a specific task by ID for the specified user
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully retrieved task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Invalid or expired token
+        '403':
+          description: User is not authorized to access this task
+        '404':
+          description: Task not found
+
+    put:
+      summary: Update a task
+      description: Updates an existing task for the specified user
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Invalid or expired token
+        '403':
+          description: User is not authorized to update this task
+        '404':
+          description: Task not found
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete a task
+      description: Deletes an existing task for the specified user
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Task successfully deleted
+        '401':
+          description: Invalid or expired token
+        '403':
+          description: User is not authorized to delete this task
+        '404':
+          description: Task not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRegistration:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          description: User's password (min 8 chars, mixed case, number, special char)
+          example: "SecureP@ss123"
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          description: User's password
+          example: "SecureP@ss123"
+
+    AuthResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          description: Token type (should be "bearer")
+          example: "bearer"
+        expires_in:
+          type: integer
+          description: Token expiry in seconds (7 days = 604800 seconds)
+          example: 604800
+
+    Task:
+      type: object
+      required:
+        - id
+        - user_id
+        - title
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Task ID (auto-increment)
+          example: 1
+        user_id:
+          type: string
+          format: uuid
+          description: User ID who owns this task
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (1-200 characters)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional task description (0-1000 characters)
+          example: "Need to buy milk, bread, and eggs"
+        status:
+          type: boolean
+          description: Task completion status (false=incomplete, true=complete)
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+          example: "2023-12-23T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Task last update timestamp
+          example: "2023-12-23T10:00:00Z"
+
+    TaskCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (1-200 characters)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional task description (0-1000 characters)
+          example: "Need to buy milk, bread, and eggs"
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (1-200 characters)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional task description (0-1000 characters)
+          example: "Need to buy milk, bread, and eggs"
+        status:
+          type: boolean
+          description: Task completion status (false=incomplete, true=complete)
+          example: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid input: title too long"
+        details:
+          type: object
+          description: Additional error details
+          example: {"field": "title", "reason": "must be 1-200 characters"}
+
+security:
+  - BearerAuth: []
