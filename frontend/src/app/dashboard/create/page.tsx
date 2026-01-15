@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X } from 'lucide-react';
+import { taskAPI } from '../../../services/api'; // Import the API service
 
 const CreateTaskPage = () => {
   const [title, setTitle] = useState('');
@@ -20,46 +21,30 @@ const CreateTaskPage = () => {
     setError('');
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies in the request
-        body: JSON.stringify({
-          title,
-          description,
-          priority: priority === 'High' ? 3 : priority === 'Medium' ? 2 : 1,
-          due_date: dueDate,
-          category
-        }),
-        signal: controller.signal
+      // Use the taskAPI service which has proper authentication configuration
+      // The API service is already configured with withCredentials: true
+      // which will automatically send the Better Auth session cookie
+      await taskAPI.createTask({
+        title,
+        description,
+        category,
+        priority: priority === 'High' ? 3 : priority === 'Medium' ? 2 : 1
+        // Note: due_date is not supported in task creation, only in updates
       });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Clear any local user state and redirect to login if unauthorized
-          // The HTTP-only cookie will be automatically cleared by the backend on logout
-          router.push('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create task');
-      }
 
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Error creating task:', err);
 
-      if (err.name === 'AbortError') {
-        setError('Request timeout. Check your connection.');
-      } else if (err.message === 'Failed to fetch') {
+      // Handle authentication errors specifically
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        // Redirect to login if authentication fails
+        router.push('/login');
+        return;
+      } else if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
         setError('Cannot connect to server. Ensure backend is running.');
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
       } else {
         setError(err.message || 'Failed to create task.');
       }

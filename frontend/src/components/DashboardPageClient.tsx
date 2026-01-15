@@ -7,6 +7,7 @@ import { authClient, signOut } from '../lib/authClient';
 import ErrorBoundary from './ErrorBoundary';
 import { taskAPI, dashboardAPI } from '../services/api';
 import dynamic from 'next/dynamic';
+import ChatBot from './chatbot-ui/ChatBot';
 
 // Dynamically import TaskList to avoid SSR issues
 const TaskList = dynamic(() => import('./TaskList'), {
@@ -372,6 +373,9 @@ export const DashboardPageClient: React.FC = () => {
             />
           </div>
         </main>
+
+        {/* ChatBot Component - Positioned to avoid overlapping with New Task button */}
+        <ChatBot position="bottom-24 right-8" />
       </div>
     </ErrorBoundary>
   );

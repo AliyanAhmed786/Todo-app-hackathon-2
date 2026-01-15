@@ -59,7 +59,18 @@ async def register_user(
         # Log successful registration
         logger.info(f"User registered successfully with ID: {user.id}, email: {user.email}")
 
-        # Create response with session token in HTTP-only cookie
+        # Create JWT tokens
+        from utils.auth import create_access_token, create_refresh_token
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        refresh_token_expires = timedelta(days=settings.refresh_token_expire_days)
+
+        access_token_data = {"sub": str(user.id)}
+        refresh_token_data = {"sub": str(user.id)}
+
+        access_token = create_access_token(data=access_token_data, expires_delta=access_token_expires)
+        refresh_token = create_refresh_token(data=refresh_token_data, expires_delta=refresh_token_expires)
+
+        # Create response with session token in HTTP-only cookie and JWT tokens
         response = JSONResponse(content={
             "user": {
                 "id": user.id,
@@ -68,7 +79,10 @@ async def register_user(
             },
             "session": {
                 "expires_at": session_expires.isoformat()
-            }
+            },
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
         })
 
         # Set session token as HTTP-only cookie for Better Auth database validation
@@ -140,7 +154,18 @@ async def login_user(
         # Log successful login
         logger.info(f"User logged in successfully with ID: {user.id}, email: {user.email}")
 
-        # Create response with session token in HTTP-only cookie
+        # Create JWT tokens
+        from utils.auth import create_access_token, create_refresh_token
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        refresh_token_expires = timedelta(days=settings.refresh_token_expire_days)
+
+        access_token_data = {"sub": str(user.id)}
+        refresh_token_data = {"sub": str(user.id)}
+
+        access_token = create_access_token(data=access_token_data, expires_delta=access_token_expires)
+        refresh_token = create_refresh_token(data=refresh_token_data, expires_delta=refresh_token_expires)
+
+        # Create response with session token in HTTP-only cookie and JWT tokens
         response = JSONResponse(content={
             "user": {
                 "id": user.id,
@@ -149,7 +174,10 @@ async def login_user(
             },
             "session": {
                 "expires_at": session.expires_at.isoformat()
-            }
+            },
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
         })
 
         # Set session token as HTTP-only cookie for Better Auth database validation
@@ -308,26 +336,34 @@ async def refresh_token(request: Request, response: JSONResponse):
 async def get_session(request: Request):
     """
     Get the current user session using Better Auth database session validation.
+    Supports both session cookies and JWT tokens.
     """
     try:
-        # Get session token from Better Auth HTTP-only cookie
+        # First, try to get session token from Better Auth HTTP-only cookie
         session_token = request.cookies.get("better-auth.session_token")
 
-        if not session_token:
-            # No valid session token, return empty session
-            logger.info("Session check - no session token provided")
-            return {"user": None}
+        # Also check for JWT token in Authorization header
+        auth_header = request.headers.get('Authorization')
+        jwt_token = None
+        if auth_header and auth_header.startswith('Bearer '):
+            jwt_token = auth_header[len('Bearer '):].strip()
 
-        # Log the session validation attempt
-        logger.info(f"Session validation attempt with token: {session_token[:20]}...")
+        user_id = None
 
-        # Validate session by querying the Better Auth session table in the database
-        from middleware.better_auth import validate_session_from_database
-        user_id = await validate_session_from_database(request)
+        if session_token:
+            # Validate session by querying the Better Auth session table in the database
+            from middleware.better_auth import validate_session_from_database
+            user_id = await validate_session_from_database(request)
+        elif jwt_token:
+            # Validate JWT token
+            from utils.auth import verify_access_token
+            payload = verify_access_token(jwt_token)
+            if payload:
+                user_id = payload.get("sub")
 
         if not user_id:
-            # Session not valid, return empty session
-            logger.info(f"Session validation failed for token: {session_token[:20]}...")
+            # No valid session or JWT token, return empty session
+            logger.info("Session check - no valid session token or JWT provided")
             return {"user": None}
 
         # Log successful session validation
@@ -355,7 +391,7 @@ async def get_session(request: Request):
                     "name": user.name,
                     "email_verified": user.email_verified
                 },
-                "token": session_token
+                "token": jwt_token if jwt_token else session_token
             }
     except Exception as e:
         # If there's an error (e.g., invalid session), return empty session

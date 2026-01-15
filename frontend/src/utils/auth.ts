@@ -65,6 +65,47 @@ export const redirectToLogin = (): void => {
         return;
     }
 
+    console.log('Redirecting to login due to authentication error');
     clearAuthCookies();
     window.location.href = '/login';
+};
+
+/**
+ * Validate if the current session is still active
+ * Checks both JWT token and Better Auth session cookie
+ * @returns boolean indicating if session is valid
+ */
+export const isValidSession = (): boolean => {
+    // Check for JWT token
+    const jwtToken = localStorage.getItem('access_token');
+    if (jwtToken) {
+        try {
+            // Decode JWT to check expiration
+            const base64Url = jwtToken.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+
+            const decodedToken = JSON.parse(jsonPayload);
+            const currentTime = Math.floor(Date.now() / 1000);
+
+            // Check if token is expired
+            if (decodedToken.exp && decodedToken.exp < currentTime) {
+                console.log('JWT token has expired');
+                localStorage.removeItem('access_token');
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error decoding JWT token:', error);
+            localStorage.removeItem('access_token');
+            return false;
+        }
+    }
+
+    // Check for Better Auth session cookie
+    const hasBetterAuthSession = document.cookie.includes('better-auth.session_token');
+    return hasBetterAuthSession;
 };

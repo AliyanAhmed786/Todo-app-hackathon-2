@@ -15,6 +15,7 @@ import httpx
 from api.task_router import router as task_router
 from api.auth_router import router as auth_router
 from api.dashboard_router import router as dashboard_router
+from api.chat_router import chat_router
 
 # Import middleware and exception handlers
 from middleware.rate_limiter import add_rate_limiting
@@ -84,6 +85,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Access-Control-Allow-Origin", "Set-Cookie"],  # Expose headers to allow cookies
 )
 
 # Add ProxyHeadersMiddleware for handling forwarded headers (if behind proxy)
@@ -115,6 +117,7 @@ add_exception_handlers(app)
 app.include_router(task_router, prefix="/api/tasks", tags=["Tasks"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api", tags=["Dashboard"])
+app.include_router(chat_router, prefix="/api", tags=["Chat"])
 
 # Log all registered routes for debugging
 for route in app.routes:

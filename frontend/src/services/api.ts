@@ -1,7 +1,7 @@
 // API service for communicating with the backend
 import axios, { AxiosResponse } from 'axios';
 import { authClient } from '../lib/authClient';
-import { redirectToLogin, isAuthError } from '../utils/auth';
+import { redirectToLogin, isAuthError, isValidSession } from '../utils/auth';
 
 // Base URL for the API (can be configured via environment variables)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -13,17 +13,44 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Enable credentials (cookies) for authentication
+  withCredentials: true, // Required for Better Auth session cookies
 });
 
-// Request interceptor - no need to add auth headers, cookies are sent automatically
+// Request interceptor to add JWT token to Authorization header
 api.interceptors.request.use(
-  (config) => {
-    // Cookies (including better-auth.session_token) are automatically sent with withCredentials: true
-    // No manual token handling needed
+  async (config) => {
+    // Validate session before making request
+    const isValid = isValidSession();
+    if (!isValid) {
+      console.warn('Session is not valid, attempting to redirect to login');
+      if (typeof window !== 'undefined') {
+        redirectToLogin();
+      }
+      // Still proceed with the request so the backend can handle the auth error
+    }
+
+    // Get the JWT token from localStorage or wherever it's stored
+    const token = localStorage.getItem('access_token');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // If no JWT token, ensure cookies are available for Better Auth
+      // The withCredentials flag is already set to true, so cookies will be sent
+      // We don't need to manually add anything to the header in this case
+      console.debug('No JWT token found, relying on Better Auth session cookies');
+    }
+
+    // Log the request for debugging
+    console.debug('Making API request:', config.method?.toUpperCase(), config.url, {
+      hasAuthHeader: !!config.headers.Authorization,
+      hasBetterAuthCookie: document.cookie.includes('better-auth.session_token')
+    });
+
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -31,11 +58,23 @@ api.interceptors.request.use(
 // Response interceptor to handle authentication errors
 api.interceptors.response.use(
   (response) => {
+    // Log successful responses for debugging
+    console.debug('API response received:', response.config.method?.toUpperCase(), response.config.url, response.status);
     return response;
   },
   (error) => {
-    // Handle authentication errors (401 Unauthorized)
+    // Log error responses for debugging
+    console.error('API error occurred:', {
+      method: error.config?.method?.toUpperCase(),
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+
+    // Handle authentication errors (401 Unauthorized, 403 Forbidden)
     if (isAuthError(error)) {
+      console.error('Authentication error occurred:', error.response?.status, error.response?.data);
       // Redirect to login and clear cookies
       if (typeof window !== 'undefined') {
         redirectToLogin();
@@ -71,23 +110,43 @@ export const authAPI = {
 
   // Logout user (client-side only)
   logout: async (): Promise<AxiosResponse> => {
-    return api.post('/api/auth/logout');
+    const response = await api.post('/api/auth/logout');
+    // Clear JWT token from localStorage
+    localStorage.removeItem('access_token');
+    return response;
   },
 };
 
-// Get user ID from Better Auth session
+// Get user ID from JWT token
 const getUserId = async (): Promise<string | null> => {
   try {
-    const session = await authClient.getSession();
-    if (!session || !session.user) {
-      // User is not authenticated
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      // No token found, user is not authenticated
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
       return null;
     }
-    const userId = session?.user?.id;
-    return userId || null;
+
+    // Decode JWT token to get user ID
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const decodedToken = JSON.parse(jsonPayload);
+      const userId = decodedToken.sub; // subject claim typically contains user ID
+      return userId || null;
+    } catch (decodeError) {
+      console.error('Error decoding JWT token:', decodeError);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      return null;
+    }
   } catch (error) {
     console.error('Error getting user ID:', error);
     // Redirect to login on error

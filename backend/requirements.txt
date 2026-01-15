@@ -15,3 +15,5 @@ asyncpg==0.30.0
 python-socketio==5.11.4
 socketio==0.9.1
 nest-asyncio==1.6.0
+openai==1.52.2
+mcp-sdk==1.0.0

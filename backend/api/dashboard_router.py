@@ -5,7 +5,7 @@ from services.task_service import (
     get_dashboard_stats_for_user
 )
 from database.session import get_db_session
-from middleware.auth import get_current_user, verify_user_owns_resource
+from dependencies.auth import get_current_user
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ async def get_dashboard_stats(
     """
     try:
         # Extract user ID from the authenticated user
-        user_id = current_user.get("id")
+        user_id = current_user.id
 
         if not user_id:
             raise HTTPException(

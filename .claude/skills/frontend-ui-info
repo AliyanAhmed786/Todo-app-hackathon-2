@@ -1,0 +1,340 @@
+# UI Design System Knowledge
+
+## Project: Todo App
+**Design Style**: Modern Glassmorphism with Coral Accent
+
+---
+
+## Color Palette
+
+### Primary Colors
+- **Coral Primary**: `#F97068` (coral-600)
+- **Coral Dark**: `#E85D54` (coral-700)
+- **Coral Light**: `#FFA5A0` (coral-300)
+- **Coral Hover Shadow**: `rgba(249, 112, 104, 0.3)` (coral-500/30)
+
+### Neutral Colors
+- **Text Primary**: `#111827` (gray-900)
+- **Text Secondary**: `#374151` (gray-700)
+- **Text Muted**: `#6B7280` (gray-500)
+- **Border**: `rgba(255, 255, 255, 0.4)` (white/40)
+- **Border Focus**: `rgba(255, 255, 255, 0.6)` (white/60)
+
+### Status Colors
+- **Success Green**: `#10B981` (green-400)
+- **Success Ring**: `#6EE7B7` (green-300)
+- **Error Red**: `#EF4444` (red-500)
+- **Error Ring**: `#FCA5A5` (red-300)
+- **Error Background**: `linear-gradient(to right, rgba(254, 226, 226, 0.6), rgba(254, 202, 202, 0.6))` (red-100/60 to red-200/60)
+- **Warning Amber**: `#F59E0B` (amber-500)
+- **Info Blue**: `#3B82F6` (blue-500)
+
+---
+
+## Background Effects
+
+### Glassmorphism
+- **Main Container**: `backdrop-blur-2xl bg-white/40`
+- **Input Fields**: `bg-white/60`
+- **Buttons (secondary)**: `backdrop-blur-xl bg-white/60`
+- **Error Alert**: `backdrop-blur-xl bg-gradient-to-r from-red-100/60 to-red-200/60`
+
+### Borders
+- **Standard**: `border border-white/60`
+- **Input Default**: `border border-white/40`
+- **Error Border**: `border-red-400/60`
+
+### Shadows
+- **Container Shadow**: `shadow-xl shadow-gray-900/10`
+- **Button Shadow**: `shadow-lg shadow-gray-900/5`
+- **Hover Shadow (Coral)**: `hover:shadow-xl hover:shadow-coral-500/30`
+
+---
+
+## Typography
+
+### Font Sizes
+- **Heading (h2)**: `text-xl` (20px)
+- **Label**: `text-sm` (14px)
+- **Input Text**: `sm:text-sm` (14px)
+- **Helper Text**: `text-xs` (12px)
+
+### Font Weights
+- **Heading**: `font-bold` (700)
+- **Label**: `font-medium` (500)
+- **Body**: `font-normal` (400)
+
+---
+
+## Component Styles
+
+### Input Fields
+```css
+Base Style:
+- appearance-none
+- block w-full
+- px-4 py-3
+- bg-white/60
+- border border-white/40
+- rounded-xl
+- shadow-sm
+- placeholder-gray-400
+- focus:outline-none
+- focus:ring-2 focus:ring-coral-300
+- focus:border-coral-400
+- transition-all duration-200
+
+Validation States:
+- Valid: focus:ring-green-300 focus:border-green-400
+- Invalid: focus:ring-red-300 focus:border-red-400 border-red-400/60
+```
+
+### Primary Button (Coral)
+```css
+Base Style:
+- p-[10px]
+- bg-gradient-to-r from-coral-600 to-coral-700
+- text-white
+- rounded-xl
+- transition-all duration-300
+- focus:ring-2 focus:ring-coral-300
+- focus:outline-none
+
+Hover Effects:
+- hover:shadow-xl hover:shadow-coral-500/30
+- hover:-translate-y-0.5
+
+Active State:
+- active:scale-95
+
+Disabled State:
+- bg-gray-400
+- cursor-not-allowed
+```
+
+### Secondary Button
+```css
+Base Style:
+- backdrop-blur-xl
+- bg-white/60
+- text-gray-700
+- py-2.5 px-4
+- rounded-xl
+- border border-white/60
+- shadow-lg shadow-gray-900/5
+- focus:ring-2 focus:ring-coral-300
+- focus:outline-none
+
+Hover:
+- hover:bg-white/80
+- hover:border-white/80
+- transition-all duration-300
+```
+
+### Select Dropdown
+```css
+Same as input fields:
+- appearance-none
+- block w-full
+- px-4 py-3
+- bg-white/60
+- border border-white/40
+- rounded-xl
+- shadow-sm
+- focus:outline-none
+- focus:ring-2 focus:ring-coral-300
+- focus:border-coral-400
+- transition-all duration-200
+```
+
+### Textarea
+```css
+Same as input fields with:
+- rows={4}
+- resize capability
+```
+
+---
+
+## Border Radius System
+
+- **Extra Large**: `rounded-3xl` (24px) - Main containers
+- **Large**: `rounded-2xl` (16px) - Alerts
+- **Medium**: `rounded-xl` (12px) - Buttons, inputs, cards
+
+---
+
+## Spacing System
+
+### Padding
+- **Container**: `p-4 sm:p-6` (16px mobile, 24px desktop)
+- **Input**: `px-4 py-3` (horizontal 16px, vertical 12px)
+- **Button Primary**: `p-[10px]` (10px all sides)
+- **Button Secondary**: `py-2.5 px-4` (vertical 10px, horizontal 16px)
+
+### Margin
+- **Section Bottom**: `mb-4` (16px)
+- **Label Bottom**: `mb-1` (4px)
+- **Element Spacing**: `space-y-2` (8px)
+
+---
+
+## Transitions & Animations
+
+### Standard Transitions
+- **All Properties**: `transition-all duration-200`
+- **Button Hover**: `transition-all duration-300`
+
+### Hover Effects
+- **Lift Up**: `hover:-translate-y-0.5`
+- **Scale Down**: `active:scale-95`
+- **Shadow Glow**: `hover:shadow-xl hover:shadow-coral-500/30`
+
+### Loading Animation
+```css
+Spinner:
+- animate-spin
+- Circle with opacity-25
+- Path with opacity-75
+```
+
+---
+
+## Form Validation Styling
+
+### Character Counter
+```css
+Position: absolute right-3
+Colors:
+- Normal: text-gray-500
+- Over Limit: text-red-500
+Size: text-xs
+```
+
+### Error Messages
+```css
+- mt-1 text-xs text-red-600
+```
+
+### Success Indicators
+```css
+- Visual ring color change: ring-green-300 border-green-400
+```
+
+---
+
+## Icons
+
+### Icon Style
+- **Size**: `w-4 h-4` or `w-5 h-5`
+- **Margin**: `mr-2` (right spacing)
+- **Position**: flex items-center justify-center
+
+### Common Icons
+- **Error**: Alert circle SVG
+- **Cancel**: X mark SVG
+- **Loading**: Spinning circle SVG
+
+---
+
+## Alert/Toast Styling
+
+### Error Alert
+```css
+- backdrop-blur-xl
+- bg-gradient-to-r from-red-100/60 to-red-200/60
+- border border-red-400/60
+- text-red-700
+- px-4 py-3
+- rounded-2xl
+- flex items-start
+- Icon: w-5 h-5 mr-2 mt-0.5 flex-shrink-0
+```
+
+---
+
+## Responsive Design
+
+### Breakpoints
+- **Mobile**: Default (< 640px)
+- **Tablet/Desktop**: `sm:` (≥ 640px)
+
+### Responsive Patterns
+```css
+Mobile First:
+- w-full (mobile)
+- sm:w-auto (desktop)
+
+Flex Direction:
+- flex-col (mobile)
+- sm:flex-row (desktop)
+
+Spacing:
+- space-y-2 (mobile)
+- sm:space-y-0 (desktop)
+```
+
+---
+
+## Priority Badge Styling
+
+### Priority Levels
+- **High (P1)**: Red theme
+- **Medium (P2)**: Amber theme  
+- **Low (P3)**: Green theme
+
+---
+
+## Usage Guidelines
+
+### When to Use Each Element
+
+**Primary Coral Button**:
+- Main actions (Create, Update, Submit)
+- Call-to-action buttons
+- Confirmation actions
+
+**Secondary Button**:
+- Cancel actions
+- Secondary navigation
+- Alternative actions
+
+**Input Fields**:
+- Text entry
+- Required fields marked with *
+- Validation feedback shown inline
+
+**Glassmorphism Containers**:
+- Forms
+- Cards
+- Modal overlays
+- Content sections
+
+---
+
+## Best Practices
+
+1. **Always include focus states** for accessibility
+2. **Use transitions** for smooth user experience
+3. **Provide visual feedback** for all interactions
+4. **Character counters** for limited inputs
+5. **Inline validation** with color-coded borders
+6. **Loading states** with spinners
+7. **Error messages** with icons
+8. **Mobile-first responsive design**
+
+---
+
+## Code Generation Instructions
+
+When generating new components:
+1. Use glassmorphism for backgrounds
+2. Apply coral gradient for primary actions
+3. Include focus rings (coral-300)
+4. Add smooth transitions (200-300ms)
+5. Implement hover effects (shadow + lift)
+6. Use rounded-xl for buttons/inputs
+7. Include character counters for limited fields
+8. Show validation states visually
+9. Make responsive with sm: breakpoint
+10. Add loading states for async actions

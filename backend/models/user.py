@@ -5,6 +5,7 @@ from datetime import datetime
 import uuid
 from pydantic import field_validator
 from pydantic.networks import EmailStr
+from models.conversation import Conversation
 
 def sanitize_input(text: str) -> str:
     """
@@ -78,6 +79,9 @@ class User(UserBase, table=True):
 
     # Relationship to tasks
     tasks: List["Task"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+
+    # Relationship to conversations
+    conversations: List["Conversation"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
 
     def __str__(self):
         return f"User(id={self.id}, name={self.name}, email={self.email})"

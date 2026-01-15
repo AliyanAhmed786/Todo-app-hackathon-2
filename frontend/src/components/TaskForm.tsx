@@ -72,6 +72,18 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskId, onTaskSubmit, onCancel, ini
       return;
     }
 
+    // Check if user is authenticated before making API call
+    const token = localStorage.getItem('access_token');
+    const hasSession = document.cookie.includes('better-auth.session_token');
+
+    if (!token && !hasSession) {
+      // No authentication available, redirect to login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
 
@@ -137,6 +149,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskId, onTaskSubmit, onCancel, ini
           errorMessage = 'Unable to connect to the backend server. Please ensure the backend is running on http://127.0.0.1:8000';
         } else if (err.response?.status === 401) {
           errorMessage = 'Session expired. Please log in again.';
+          // Redirect to login on 401 error
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
         } else if (err.response?.status === 403) {
           errorMessage = 'Access denied. You can only modify your own tasks.';
         } else if (err.response?.data?.detail) {

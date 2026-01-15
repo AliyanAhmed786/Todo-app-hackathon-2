@@ -47,7 +47,7 @@ async def get_current_user(
         )
 
     # Get user from database
-    user = await db.get(User, int(user_id))
+    user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,13 +57,13 @@ async def get_current_user(
 
     return user
 
-async def get_user_by_id(user_id: int, db: AsyncSession) -> Optional[User]:
+async def get_user_by_id(user_id: str, db: AsyncSession) -> Optional[User]:
     """
     Helper function to get a user by ID from the database.
     """
     return await db.get(User, user_id)
 
-def verify_user_owns_task(user: User, task_user_id: int) -> bool:
+def verify_user_owns_task(user: User, task_user_id: str) -> bool:
     """
     Verify that the authenticated user owns the task.
     """

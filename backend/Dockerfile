@@ -18,5 +18,5 @@ COPY . .
 
 EXPOSE 7860
 
-# Use python main.py with port override
-CMD ["python", "-c", "import os; os.environ['PORT']='7860'; exec(open('main.py').read())"]
+# Add this line to run from the app directory with proper path
+CMD ["python", "-c", "import sys; sys.path.insert(0, '/app'); import uvicorn; uvicorn.run('main:app', host='0.0.0.0', port=7860)"]

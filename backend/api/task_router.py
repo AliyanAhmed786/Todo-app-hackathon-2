@@ -10,7 +10,7 @@ from database.session import get_db_session
 from schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskResponse, TaskListResponse
 from exceptions.handlers import ValidationError
 from config import settings
-from middleware.auth import get_current_user, verify_user_owns_resource
+from middleware.auth import get_current_user
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -28,10 +28,19 @@ async def create_task_endpoint(
     Create a new task for the authenticated user.
     """
     try:
-        # Extract user ID from the authenticated user
+        # Log the current_user object for debugging
+        logger.info(f"Authenticated user object: {current_user}")
+        print(f"DEBUG AUTH: create_task_endpoint - current_user: {current_user}")
+        print(f"DEBUG AUTH: create_task_endpoint - current_user type: {type(current_user)}")
+
+        # Extract user ID from the authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
+        logger.info(f"Extracted user_id from authenticated user: {user_id}")
+        print(f"DEBUG AUTH: create_task_endpoint - extracted user_id: {user_id}")
 
         if not user_id:
+            logger.error("User ID not found in authentication token")
+            print(f"DEBUG AUTH: create_task_endpoint - ERROR: User ID not found")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
@@ -42,6 +51,7 @@ async def create_task_endpoint(
 
         # Validate the request data
         validated_request = TaskCreate.model_validate(task_request.model_dump())
+        logger.debug(f"Validated task request: {validated_request}")
 
         # Additional validation - check if the user is trying to create too many tasks
         # Get current task count for the user
@@ -103,11 +113,13 @@ async def create_task_endpoint(
             logger.warning(f"Failed to initiate dashboard broadcast: {str(e)}")
 
         # Return the created task
+        logger.info(f"Returning created task with ID: {task.id}")
         return TaskResponse.model_validate(task.model_dump())
     except ValueError as e:
         logger.warning(f"Task creation failed due to validation error for user {user_id}: {str(e)}")
         raise ValidationError(str(e))
-    except HTTPException:
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task creation for user {user_id}: {he.status_code} - {he.detail}")
         # Re-raise HTTP exceptions (like 403)
         raise
     except Exception as e:
@@ -128,14 +140,18 @@ async def get_tasks_endpoint(
     Get all tasks for the authenticated user.
     """
     try:
-        # Extract user ID from the authenticated user
+        # Extract user ID from the authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
 
         if not user_id:
+            logger.error("User ID not found in authentication token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
             )
+
+        # Log the task retrieval attempt
+        logger.info(f"Task retrieval attempt for user ID: {user_id}")
 
         # Get tasks for the user
         tasks = await get_tasks_by_user(
@@ -148,12 +164,17 @@ async def get_tasks_endpoint(
         # Convert to response format
         task_responses = [TaskResponse.model_validate(task.model_dump()) for task in tasks]
 
+        # Log successful retrieval
+        logger.info(f"Retrieved {len(tasks)} tasks for user: {user_id}")
+
         # Return the list of tasks
         return TaskListResponse(tasks=task_responses)
-    except HTTPException:
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task retrieval for user: {he.status_code} - {he.detail}")
         # Re-raise HTTP exceptions (like 403)
         raise
     except Exception as e:
+        logger.error(f"Unexpected error during task retrieval: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving tasks: {str(e)}"
@@ -169,14 +190,18 @@ async def get_task_endpoint(
     Get a specific task by ID for the authenticated user.
     """
     try:
-        # Extract user ID from the authenticated user
+        # Extract user ID from the authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
 
         if not user_id:
+            logger.error(f"User ID not found in authentication token when accessing task {task_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
             )
+
+        # Log the task access attempt
+        logger.info(f"Task access attempt for task ID: {task_id}, user ID: {user_id}")
 
         # Get the task
         task = await get_task_by_id(
@@ -185,12 +210,17 @@ async def get_task_endpoint(
             user_id=user_id
         )
 
+        # Log successful task access
+        logger.info(f"Task {task_id} accessed successfully by user: {user_id}")
+
         # Return the task
         return TaskResponse.model_validate(task.model_dump())
-    except HTTPException:
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task access for task {task_id}, user {user_id}: {he.status_code} - {he.detail}")
         # Re-raise HTTP exceptions (like 404, 403)
         raise
     except Exception as e:
+        logger.error(f"Unexpected error during task access for task {task_id}, user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving task: {str(e)}"
@@ -207,10 +237,11 @@ async def update_task_endpoint(
     Update a specific task by ID for the authenticated user.
     """
     try:
-        # Extract user ID from the authenticated user
+        # Extract user ID from the authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
 
         if not user_id:
+            logger.error(f"User ID not found in authentication token when updating task {task_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
@@ -271,7 +302,8 @@ async def update_task_endpoint(
 
         # Return the updated task
         return TaskResponse.model_validate(task.model_dump())
-    except HTTPException:
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task update for task {task_id}, user {user_id}: {he.status_code} - {he.detail}")
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
@@ -293,9 +325,10 @@ async def complete_task_endpoint(
     Phase II spec compliant endpoint: PATCH /api/tasks/{id}/complete
     """
     try:
-        # Extract user ID from authenticated user
+        # Extract user ID from authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
         if not user_id:
+            logger.error(f"User ID not found in authentication token when completing task {task_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
@@ -321,8 +354,9 @@ async def complete_task_endpoint(
 
         # Return the updated task
         return TaskResponse.model_validate(task.model_dump())
-    
-    except HTTPException:
+
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task completion for task {task_id}, user {user_id}: {he.status_code} - {he.detail}")
         raise
     except Exception as e:
         logger.error(f"Error completing task {task_id} for user {user_id}: {str(e)}", exc_info=True)
@@ -342,10 +376,11 @@ async def delete_task_endpoint(
     Delete a specific task by ID for the authenticated user.
     """
     try:
-        # Extract user ID from the authenticated user
+        # Extract user ID from the authenticated user (Better Auth returns dict)
         user_id = current_user.get("id")
 
         if not user_id:
+            logger.error(f"User ID not found in authentication token when deleting task {task_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in authentication token"
@@ -380,9 +415,10 @@ async def delete_task_endpoint(
 
         # Return success message
         return {"message": "Task deleted successfully"}
-    except HTTPException as e:
+    except HTTPException as he:
+        logger.error(f"HTTP Exception during task deletion for task {task_id}, user {user_id}: {he.status_code} - {he.detail}")
         # Log failures
-        logger.warning(f"Task deletion failed for task {task_id}, user {user_id}: {str(e.detail)}")
+        logger.warning(f"Task deletion failed for task {task_id}, user {user_id}: {str(he.detail)}")
         # Re-raise HTTP exceptions (like 404, 403)
         raise
     except Exception as e:
