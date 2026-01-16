@@ -23,8 +23,8 @@ async def get_dashboard_stats(
     Returns total tasks, completed tasks, and pending tasks counts.
     """
     try:
-        # Extract user ID from the authenticated user
-        user_id = current_user.id
+        # Extract user ID from the authenticated user (now a dict)
+        user_id = current_user.get("id")
 
         if not user_id:
             raise HTTPException(

@@ -1,7 +1,8 @@
-// ProtectedRoute component to protect authenticated routes
-import React from 'react';
-import { isAuthenticated } from '../utils/auth';
-import { useRouter } from 'next/router';
+'use client';
+
+import React, { useEffect } from 'react';
+import { isValidSession } from '../utils/auth';
+import { useRouter } from 'next/navigation';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,14 +15,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const router = useRouter();
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && !isAuthenticated()) {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isValidSession()) {
       // Redirect to login if not authenticated
       router.push('/login');
     }
   }, [router]);
 
-  if (typeof window !== 'undefined' && !isAuthenticated()) {
+  if (typeof window !== 'undefined' && !isValidSession()) {
     return fallback;
   }
 

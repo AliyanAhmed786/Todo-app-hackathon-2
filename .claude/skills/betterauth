@@ -1,0 +1,57 @@
+Auth Skill: Next.js + FastAPI Bridge (Better Auth)
+
+1. Frontend Standards
+Client Instance: Exclusively use the singleton authClient from frontend/src/lib/authClient.ts.
+
+Authentication Flow:
+
+Use authClient.signIn.email({ email, password }) for logins.
+
+Zero-Manual Storage: Never use localStorage or sessionStorage for tokens.
+
+No Manual Headers: Do not manually inject Authorization: Bearer headers; let the browser handle cookies.
+
+Session Management: Use the useSession() hook for UI reactivity and the ProtectedRoute.tsx component for route guarding.
+
+2. Backend Standards
+CORS Policy:
+
+allow_credentials=True is mandatory in backend/main.py.
+
+allow_origins must be restricted to the specific frontend URL (no wildcards).
+
+Validation Dependency: Every protected route in api/task_router.py and api/dashboard_router.py must implement the get_current_user dependency.
+
+Dependency Logic:
+
+Cookie Extraction: Read better-auth.session_token directly from the request cookies.
+
+DB Verification: Validate the token against the PostgreSQL session table using backend/services/session_service.py.
+
+Identity Resolution: Return the User object from backend/models/user.py or raise an HTTP_401_UNAUTHORIZED exception.
+
+3. Cookie & CSRF Security (The "Missing Link")
+Cookie Attributes: Ensure backend/auth/auth_setup.py configures cookies with:
+
+SameSite="Lax" (to allow cross-origin requests from the frontend).
+
+HttpOnly=True (to prevent XSS access).
+
+Secure=True (in production) or False (for http://localhost development).
+
+CSRF Handling: Better Auth includes built-in CSRF protection. The agent must ensure the X-Csrf-Token header is allowed in the backend CORS configuration.
+
+4. Configuration & Paths
+Endpoints:
+
+BETTER_AUTH_URL: Points to the FastAPI backend (e.g., http://localhost:8000).
+
+TRUSTED_ORIGINS: Must include the frontend URL (e.g., http://localhost:3000).
+
+Core Files:
+
+Setup: backend/auth/auth_setup.py
+
+Middleware: backend/middleware/better_auth.py
+
+Client Config: frontend/src/lib/authClient.ts

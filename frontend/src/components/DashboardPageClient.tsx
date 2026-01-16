@@ -17,6 +17,7 @@ const TaskList = dynamic(() => import('./TaskList'), {
 
 export const DashboardPageClient: React.FC = () => {
   const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
   const [user, setUser] = useState<{ id: string; name?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
@@ -92,42 +93,34 @@ export const DashboardPageClient: React.FC = () => {
   }, []); // Empty dependency array since dashboardAPI is stable
 
   useEffect(() => {
-    const checkAuthAndLoadData = async () => {
-      try {
-        // STEP 1: Check if user is authenticated by getting session
-        const session = await authClient.getSession();
+    // Handle pending state
+    if (isPending) {
+      setLoading(true);
+      return;
+    }
 
-        if (session?.user) {
-          // STEP 2: User is authenticated, set user data
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name
-          });
+    // Check if user is authenticated
+    if (session?.user) {
+      // User is authenticated, set user data
+      setUser({
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name
+      });
 
-          // Mark auth as checked before fetching stats
-          setAuthChecked(true);
-          setLoading(false);
+      // Mark auth as checked before fetching stats
+      setAuthChecked(true);
+      setLoading(false);
 
-          // STEP 3: Only fetch dashboard statistics AFTER auth is confirmed
-          await fetchDashboardStats();
-        } else {
-          // User is not authenticated, redirect to login
-          console.warn('No active session found, redirecting to login');
-          router.push('/login');
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        setError('Error checking authentication status. Please try logging in again.');
-        // Redirect to login on authentication errors
-        router.push('/login');
-        return;
-      }
-    };
-
-    checkAuthAndLoadData();
-  }, [router, fetchDashboardStats]); // Include fetchDashboardStats in dependencies
+      // Only fetch dashboard statistics AFTER auth is confirmed
+      fetchDashboardStats();
+    } else {
+      // User is not authenticated, redirect to login
+      console.warn('No active session found, redirecting to login');
+      router.push('/login');
+      return;
+    }
+  }, [session, isPending, router, fetchDashboardStats]); // Include session and isPending in dependencies
 
   const handleLogout = async () => {
     try {

@@ -16,34 +16,11 @@ const api = axios.create({
   withCredentials: true, // Required for Better Auth session cookies
 });
 
-// Request interceptor to add JWT token to Authorization header
+// Request interceptor to log requests
 api.interceptors.request.use(
   async (config) => {
-    // Validate session before making request
-    const isValid = isValidSession();
-    if (!isValid) {
-      console.warn('Session is not valid, attempting to redirect to login');
-      if (typeof window !== 'undefined') {
-        redirectToLogin();
-      }
-      // Still proceed with the request so the backend can handle the auth error
-    }
-
-    // Get the JWT token from localStorage or wherever it's stored
-    const token = localStorage.getItem('access_token');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      // If no JWT token, ensure cookies are available for Better Auth
-      // The withCredentials flag is already set to true, so cookies will be sent
-      // We don't need to manually add anything to the header in this case
-      console.debug('No JWT token found, relying on Better Auth session cookies');
-    }
-
     // Log the request for debugging
     console.debug('Making API request:', config.method?.toUpperCase(), config.url, {
-      hasAuthHeader: !!config.headers.Authorization,
       hasBetterAuthCookie: document.cookie.includes('better-auth.session_token')
     });
 
@@ -117,45 +94,6 @@ export const authAPI = {
   },
 };
 
-// Get user ID from JWT token
-const getUserId = async (): Promise<string | null> => {
-  try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      // No token found, user is not authenticated
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
-      return null;
-    }
-
-    // Decode JWT token to get user ID
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-
-      const decodedToken = JSON.parse(jsonPayload);
-      const userId = decodedToken.sub; // subject claim typically contains user ID
-      return userId || null;
-    } catch (decodeError) {
-      console.error('Error decoding JWT token:', decodeError);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
-      return null;
-    }
-  } catch (error) {
-    console.error('Error getting user ID:', error);
-    // Redirect to login on error
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
-    return null;
-  }
-};
 
 // Dashboard API functions
 export const dashboardAPI = {

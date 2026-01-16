@@ -95,56 +95,11 @@ const LoginFormClient: React.FC = () => {
       if (result.error) {
         setServerError(result.error.message || 'Login failed. Please try again.');
       } else {
-        // Manual Token Storage: Extract token from the response and save it to localStorage
-        let token = null;
-
-        // Check if token is in the session response
-        if (result.session?.token) {
-          token = result.session.token;
-        }
-        // Check if token is in the user response (fallback)
-        else if (result.token) {
-          token = result.token;
-        }
-
-        // If we found a token, store it and configure Axios
-        if (token) {
-          localStorage.setItem('token', token);
-
-          // Axios Header: Set the default header for subsequent requests
-          axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-        }
-
         router.push('/dashboard');
       }
     } catch (err: any) {
       console.error('Login error:', err);
-
-      // If Better Auth fails, fallback to direct API call with axios
-      try {
-        const response = await axios.post('/api/auth/login', {
-          email: formData.email,
-          password: formData.password,
-        }, {
-          withCredentials: true, // Cookie Credentials: Ensure credentials are included
-        });
-
-        // Extract token from the response and save it
-        let token = null;
-        if (response.data.session?.token) {
-          token = response.data.session.token;
-        }
-
-        if (token) {
-          localStorage.setItem('token', token);
-          axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-        }
-
-        router.push('/dashboard');
-      } catch (fallbackError: any) {
-        console.error('Fallback login error:', fallbackError);
-        setServerError('Login failed. Please try again.');
-      }
+      setServerError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
