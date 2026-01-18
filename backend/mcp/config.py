@@ -12,6 +12,9 @@ class MCPConfig(BaseSettings):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4-1106-preview")  # GPT-4 Turbo
 
+    # Gemini Configuration - added as required by skill file
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")  # Required for Gemini API
+
     # Server Configuration
     server_host: str = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
     server_port: int = int(os.getenv("MCP_SERVER_PORT", "8001"))

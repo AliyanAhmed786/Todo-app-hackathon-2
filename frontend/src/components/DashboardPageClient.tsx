@@ -8,9 +8,10 @@ import ErrorBoundary from './ErrorBoundary';
 import { taskAPI, dashboardAPI } from '../services/api';
 import dynamic from 'next/dynamic';
 import ChatBot from './chatbot-ui/ChatBot';
+import { TaskListRef } from './TaskList';
 
 // Dynamically import TaskList to avoid SSR issues
-const TaskList = dynamic(() => import('./TaskList'), {
+const DynamicTaskList = dynamic(() => import('./TaskList'), {
   loading: () => <div className="text-center py-8">Loading tasks...</div>,
   ssr: false
 });
@@ -18,6 +19,7 @@ const TaskList = dynamic(() => import('./TaskList'), {
 export const DashboardPageClient: React.FC = () => {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const taskListRef = useRef<TaskListRef>(null);
   const [user, setUser] = useState<{ id: string; name?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
@@ -340,7 +342,8 @@ export const DashboardPageClient: React.FC = () => {
           {/* Task Cards Section */}
           <div className="mt-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Your Tasks</h3>
-            <TaskList
+            <DynamicTaskList
+              ref={taskListRef}
               onTaskChange={(updatedTasks) => {
                 // Calculate stats instantly from local tasks for immediate feedback
                 if (updatedTasks && updatedTasks.length > 0) {
@@ -368,7 +371,18 @@ export const DashboardPageClient: React.FC = () => {
         </main>
 
         {/* ChatBot Component - Positioned to avoid overlapping with New Task button */}
-        <ChatBot position="bottom-24 right-8" />
+        <ChatBot
+          position="bottom-24 right-8"
+          userId={user?.id}
+          onTaskChange={async () => {
+            // CRITICAL: Trigger both dashboard stats refresh AND task list refresh
+            // to ensure the UI matches the database (per requirement 21)
+            await fetchDashboardStats();
+            if (taskListRef.current) {
+              await taskListRef.current.refreshTasks();
+            }
+          }}
+        />
       </div>
     </ErrorBoundary>
   );

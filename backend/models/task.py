@@ -1,7 +1,7 @@
 import re
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from pydantic import field_validator, model_validator
 
@@ -43,6 +43,7 @@ class TaskBase(SQLModel):
     status: bool = Field(default=False)
     category: Optional[str] = Field(default=None, max_length=100)
     priority: PriorityEnum = Field(default=PriorityEnum.MEDIUM)
+    due_date: Optional[date] = Field(default=None)
 
     @field_validator('title')
     @classmethod
@@ -79,6 +80,11 @@ class TaskBase(SQLModel):
         if len(sanitized) > 100:
             raise ValueError('Category must be no more than 100 characters')
         return sanitized
+
+    @field_validator('due_date')
+    @classmethod
+    def validate_due_date(cls, v):
+        return v  # Just return the value as-is, no complex validation needed
 
 class Task(TaskBase, table=True):
     """

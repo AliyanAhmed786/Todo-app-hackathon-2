@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { CheckCircle, Edit3, Trash2, Plus, Calendar, Check, X } from 'lucide-react';
 import { taskAPI } from '../services/api';
 import TaskEditModal from './TaskEditModal';
@@ -19,7 +19,11 @@ interface TaskListProps {
   onTaskAction?: () => Promise<void>; // Function to fetch dashboard stats from parent (renamed prop)
 }
 
-const TaskList: React.FC<TaskListProps> = ({ onTaskChange, onTaskAction }) => {
+export interface TaskListRef {
+  refreshTasks: () => Promise<void>;
+}
+
+const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskAction }, ref) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +31,11 @@ const TaskList: React.FC<TaskListProps> = ({ onTaskChange, onTaskAction }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Expose refreshTasks function to parent component via ref
+  useImperativeHandle(ref, () => ({
+    refreshTasks: fetchTasks
+  }));
 
   // Fetch tasks on component mount
   useEffect(() => {
@@ -423,6 +432,6 @@ const TaskList: React.FC<TaskListProps> = ({ onTaskChange, onTaskAction }) => {
       )}
     </div>
   );
-};
+});
 
 export default TaskList;

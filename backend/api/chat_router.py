@@ -4,8 +4,8 @@ Chat router for chatbot backend API endpoints.
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Dict, Any, Optional
-from uuid import UUID
 import uuid
 import json
 from datetime import datetime
@@ -20,7 +20,7 @@ from exceptions.chat_exceptions import (
     create_user_id_mismatch_http_exception,
     create_database_operation_http_exception
 )
-from agents.chat_agent import chat_agent
+from agents.chat_agent import get_chat_agent
 from mcp.tools import MCPTaskTools
 
 # Create the router
@@ -33,7 +33,7 @@ async def create_or_continue_conversation(
     message_data: Dict[str, Any],
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_chat_user),
-    db: Session = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """
     Create a new conversation or continue an existing one.
@@ -59,35 +59,34 @@ async def create_or_continue_conversation(
                 detail="Message is required"
             )
 
-        # Validate and convert conversation_id if provided
+        # Validate conversation_id if provided - but don't convert to UUID as per ID Type Safety Rule
         conversation_id = None
         if conversation_id_str:
-            try:
-                conversation_id = UUID(conversation_id_str)
-            except ValueError:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid conversation_id format"
-                )
+            # Just assign the string value directly - Better Auth IDs are hex strings
+            conversation_id = conversation_id_str
 
         # Get or create conversation
         if conversation_id:
             # Verify that the conversation belongs to the user
-            conversation = db.get(Conversation, conversation_id)
+            conversation = await db.get(Conversation, conversation_id)
             if not conversation or str(conversation.user_id) != user_id:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Conversation not found or access denied"
                 )
         else:
-            # Create a new conversation
+            # Create a new conversation - using raw user_id string as per ID Type Safety Rule
             conversation = Conversation(
-                user_id=UUID(user_id),
-                metadata={}
+                user_id=user_id,
+                meta_data="{}"  # Use meta_data to match the model field name
             )
+            print(f'DEBUG: Saving data for user {user_id}')
             db.add(conversation)
-            db.commit()
-            db.refresh(conversation)
+            print(f'DEBUG: Added conversation for user {user_id}')
+            await db.commit()
+            print(f'DEBUG: Committed conversation for user {user_id}')
+            await db.refresh(conversation)
+            print(f'DEBUG: Refreshed conversation for user {user_id}')
 
         # Create user message
         user_message_obj = Message(
@@ -97,10 +96,12 @@ async def create_or_continue_conversation(
             timestamp=datetime.utcnow()
         )
         db.add(user_message_obj)
-        db.commit()
+        print(f'DEBUG: Added user message for user {user_id}')
+        await db.commit()
+        print(f'DEBUG: Committed user message for user {user_id}')
 
-        # Initialize the chat agent with database session
-        await chat_agent.initialize_tools(db)
+        # Initialize the chat agent with database session using factory function
+        agent = await get_chat_agent(db)  # New instance per request
 
         # Prepare conversation context for the AI agent
         # For now, we'll use a simple approach - in a real implementation,
@@ -108,7 +109,7 @@ async def create_or_continue_conversation(
         conversation_context = []
 
         # Process the user message through the AI agent
-        ai_response = await chat_agent.process_with_retry(
+        ai_response = await agent.process_with_retry(
             user_id=user_id,
             user_message=user_message,
             conversation_context=conversation_context
@@ -122,7 +123,9 @@ async def create_or_continue_conversation(
             timestamp=datetime.utcnow()
         )
         db.add(agent_message_obj)
-        db.commit()
+        print(f'DEBUG: Added agent message for user {user_id}')
+        await db.commit()
+        print(f'DEBUG: Committed agent message for user {user_id}')
 
         # Prepare the response
         response = {
@@ -144,8 +147,8 @@ async def create_or_continue_conversation(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        # Log the error (in a real implementation)
-        print(f"Error in create_or_continue_conversation: {str(e)}")
+        # Explicit Exception Logging: Print specific error as required by skill file
+        print(f"❌ BACKEND CRASH: {str(e)}")
 
         # Raise a generic error
         raise HTTPException(
@@ -159,7 +162,7 @@ async def get_conversation_history(
     user_id: str,
     conversation_id: str,
     current_user: User = Depends(get_current_chat_user),
-    db: Session = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """
     Get the history of a specific conversation.
@@ -174,17 +177,11 @@ async def get_conversation_history(
         Dict containing conversation history
     """
     try:
-        # Validate conversation_id format
-        try:
-            conv_id = UUID(conversation_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid conversation_id format"
-            )
+        # Use conversation_id as a raw string - Better Auth IDs are hex strings that fail UUID validation
+        conv_id = conversation_id
 
         # Verify that the conversation belongs to the user
-        conversation = db.get(Conversation, conv_id)
+        conversation = await db.get(Conversation, conv_id)
         if not conversation or str(conversation.user_id) != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -197,7 +194,8 @@ async def get_conversation_history(
             Message.conversation_id == conv_id
         ).order_by(Message.timestamp)
 
-        messages = db.exec(messages_query).all()
+        result = await db.exec(messages_query)
+        messages = result.all()
 
         # Format the response
         formatted_messages = []
@@ -221,8 +219,8 @@ async def get_conversation_history(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        # Log the error (in a real implementation)
-        print(f"Error in get_conversation_history: {str(e)}")
+        # Explicit Exception Logging: Print specific error as required by skill file
+        print(f"❌ BACKEND CRASH: {str(e)}")
 
         # Raise a generic error
         raise HTTPException(
@@ -236,7 +234,7 @@ async def delete_conversation(
     user_id: str,
     conversation_id: str,
     current_user: User = Depends(get_current_chat_user),
-    db: Session = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """
     Delete a specific conversation.
@@ -251,17 +249,11 @@ async def delete_conversation(
         Dict confirming deletion
     """
     try:
-        # Validate conversation_id format
-        try:
-            conv_id = UUID(conversation_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid conversation_id format"
-            )
+        # Use conversation_id as a raw string - Better Auth IDs are hex strings that fail UUID validation
+        conv_id = conversation_id
 
         # Verify that the conversation belongs to the user
-        conversation = db.get(Conversation, conv_id)
+        conversation = await db.get(Conversation, conv_id)
         if not conversation or str(conversation.user_id) != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -270,7 +262,7 @@ async def delete_conversation(
 
         # Delete the conversation (messages will be deleted due to CASCADE)
         db.delete(conversation)
-        db.commit()
+        await db.commit()
 
         return {
             "success": True,
@@ -281,8 +273,8 @@ async def delete_conversation(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        # Log the error (in a real implementation)
-        print(f"Error in delete_conversation: {str(e)}")
+        # Explicit Exception Logging: Print specific error as required by skill file
+        print(f"❌ BACKEND CRASH: {str(e)}")
 
         # Raise a generic error
         raise HTTPException(
@@ -298,7 +290,7 @@ async def process_chat_message(
     message_data: Dict[str, Any],
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_chat_user),
-    db: Session = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """
     Process a chat message (backward compatible with original design).

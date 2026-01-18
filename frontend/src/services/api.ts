@@ -9,7 +9,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds to accommodate Neon PostgreSQL cold starts and authentication
+  timeout: 90000, // 90 seconds to accommodate multi-turn workflows (list_tasks -> update_task) taking 40-60 seconds
   headers: {
     'Content-Type': 'application/json',
   },
@@ -145,6 +145,24 @@ export const taskAPI = {
       throw new Error(`Invalid task ID: ${taskId}. Task ID must be a positive integer.`);
     }
     return api.delete(`/api/tasks/${taskId}`);
+  },
+};
+
+// Chat API functions
+export const chatAPI = {
+  // Send a message in a conversation
+  sendMessage: async (userId: string, messageData: { message: string; conversation_id?: string }): Promise<AxiosResponse> => {
+    return api.post(`/api/chat/${userId}/conversation`, messageData);
+  },
+
+  // Get conversation history
+  getConversationHistory: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
+    return api.get(`/api/chat/${userId}/conversation/${conversationId}`);
+  },
+
+  // Delete a conversation
+  deleteConversation: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
+    return api.delete(`/api/chat/${userId}/conversation/${conversationId}`);
   },
 };
 

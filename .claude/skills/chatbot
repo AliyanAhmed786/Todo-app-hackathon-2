@@ -1,0 +1,373 @@
+# Chatbot AI Agent Skill File
+
+## Core Architecture
+- **AI Engine:** OpenAI (via AsyncOpenAI SDK)
+- **Database:** Neon PostgreSQL via SQLModel (Async)
+- **Protocol:** MCP for tool calling
+- **UI:** Next.js (Tailwind) using Axios
+
+## Context Files
+
+### Backend
+- `backend/agents/chat_agent.py`
+- `backend/mcp/tools.py`
+- `backend/api/chat_router.py`
+- `backend/database/session.py`
+- `backend/models/message.py`
+- `backend/dependencies/chat_auth.py`
+
+### Frontend
+- `frontend/src/components/chatbot-ui/ChatWindow.tsx`
+- `frontend/src/components/chatbot-ui/MessageBubble.tsx`
+- `frontend/src/components/chatbot-ui/types.ts`
+- `frontend/src/services/api.ts`
+
+## Critical Rules
+
+### 1. Async Database Pattern
+- Always use `AsyncSession` with `await`
+- Type hint: `db: AsyncSession`
+- Use `await db.get()`, `await db.commit()`, `await db.refresh()`
+- Store session in `self.db_session` during tool initialization
+
+### 2. OpenAI API Configuration
+- Model: `gpt-4o-mini`
+- Use standard OpenAI endpoint (no custom base URL)
+- API Key: `config.openai_api_key` or `os.getenv("OPENAI_API_KEY")`
+- Handle `content: null` responses
+
+### 3. ID & Auth Safety
+- Better Auth IDs are hex strings, NOT UUIDs
+- Never use `UUID(user_id)` conversion
+- User ID comes from FastAPI session, never from LLM
+- Use dictionary-safe access: `.get('id')`
+- All ID comparisons: `str(id1) == str(id2)`
+- Task IDs may be strings or ints - always convert for comparison
+
+### 4. 2-Step Pattern (Mandatory)
+- Before `delete_task` or `update_task` by name: call `list_tasks` first
+- Agent finds correct `task_id` from results
+- Never guess task IDs
+
+### 5. Error Handling
+- Log errors: `print(f"❌ BACKEND CRASH: {e}")`
+- Log tool execution: `print(f"✅ Tool {tool_name} called with {params}")`
+- Return valid JSON to preserve CORS headers
+- Use `HTTPException` for errors
+
+### 6. Database Dependency
+- Import: `from backend.database.session import get_db_session`
+- Never use `get_async_db_session` or `get_db`
+
+
+
+### 9. Conversation Model
+- Use `meta_data` field (not `metadata`)
+- Pass `user_id` as string
+
+### 10. Tool Result Safety
+- Check `if tool_calls:` before accessing
+- Handle `json.loads()` on empty arguments
+- Ensure `final_content` is not `None`
+
+### 11. OpenAI Agents SDK Pattern (Current Implementation)
+- Model: `gpt-4o-mini` for cost efficiency
+- Use `AsyncOpenAI` client with standard completions API
+- Tool choice: `"auto"` - let model decide when to use tools
+- System prompt includes user_id and date defaults
+- Tool calls processed sequentially, results fed back to model
+
+
+### 14. Retry Logic
+- Max attempts: `config.retry_attempts`
+- Exponential backoff: `base_delay * (2 ** attempt)`
+- Random jitter: `+ random.uniform(0, 1)`
+- Max delay cap: `config.max_retry_delay`
+
+### 15. System Prompt Requirements
+- Include user_id at start
+- Set date default to `datetime.now().strftime('%Y-%m-%d')`
+- Enforce 2-Step pattern for delete/update by name
+- Require result description after tool calls
+- Handle empty lists explicitly
+- No technical error details to user
+
+### 16. MCP Tools Database Session
+- MCPTaskTools `__init__` must accept and store AsyncSession
+- Pattern: `def __init__(self, db_session: AsyncSession): self.db_session = db_session`
+- All tool methods use `self.db_session` for queries
+- Add logging in each tool: `print(f"✅ {tool_name} executing for user {user_id}")`
+- Verify session type on init: `print(f"✅ Tools initialized with {type(db_session)}")`
+
+### 17. Task ID Handling
+- Task IDs in database may be integers
+- Tool parameters receive task_id as string
+- Convert before query: `int(task_id)` if needed
+- Handle conversion errors gracefully
+
+## Scope
+- Only modify chatbot-related files
+- Do not touch Auth or Dashboard unless chatbot flow broken
+
+
+@backend/models/task.py @backend/database/migrations.py
+
+Fix missing due_date column in Task model.
+
+ISSUE:
+SQL query shows task table has no due_date column.
+Tools trying to use due_date field that doesn't exist in database.
+
+FIXES NEEDED:
+1. Verify Task model has: `due_date: Optional[date] = None`
+2. Create migration to add due_date column to existing tasks table
+3. Run migration
+
+Migration SQL:
+ALTER TABLE task ADD COLUMN due_date DATE;
+
+After fix, list_tasks will work without due_date errors.
+
+Show current Task model definition.
+
+
+### 18. MCP Tools Exception Handling & Logging
+- Wrap all database operations in try-except blocks
+- Log exceptions with full traceback: `traceback.print_exc()`
+- After query execution, log result count: `print(f"✅ Found {len(results)} items")`
+- When processing results, log each item: `print(f"✅ Processing {item.id}")`
+- Before returning, log success: `print(f"✅ Returning {len(task_list)} tasks")`
+- On exception, log error type and message: `print(f"❌ {tool_name} ERROR: {type(e).__name__}: {e}")`
+- Never swallow exceptions - always re-raise after logging
+- Return error dict only for expected business logic errors, not for database/processing errors
+
+### 19. Task Serialization Safety
+- When converting SQLModel to dict, handle Optional fields explicitly
+- Check for None before calling methods: `if task.due_date: due_date_str = task.due_date.isoformat()`
+- Use `.dict()` or manual dict construction, never assume all fields exist
+- Handle date serialization: convert `date` objects to string format
+- Test with empty database first, then with sample data
+```
+
+Add these to skill file, then:
+```
+@backend/mcp/tools.py
+
+Fix list_tasks exception handling per skill file sections 18-19.
+
+Add detailed logging and exception traceback.
+Show current list_tasks method code.
+
+### 20. Task List Auto-Refresh on Chat Actions
+- Frontend listens for chat responses with action.type
+- Action types: `task_created`, `task_updated`, `task_deleted`, `task_listed`
+- On receiving action, trigger task list refresh via callback
+- Pass `onTaskChange` prop from dashboard to chatbot
+- ChatWindow calls `onTaskChange()` after successful chat response with task action
+- Dashboard re-fetches tasks when callback fires
+```
+
+Prompt:
+```
+@frontend/src/components/chatbot-ui/ChatWindow.tsx @frontend/src/app/dashboard/page.tsx
+
+Add task list auto-refresh when chatbot modifies tasks.
+
+CHANGES:
+1. ChatWindow accepts onTaskChange callback prop
+2. After chat response, check if action.type includes "task_"
+3. If yes, call onTaskChange()
+4. Dashboard passes task refetch function to ChatBot
+
+Show current ChatWindow and dashboard page code.
+
+### 21. Frontend State Synchronization (ReAct -> UI)
+- The chatbot must emit a specific `action.type` for every database modification.
+- Action Mapping:
+  - `add_task` -> `task_created`
+  - `update_task` -> `task_updated`
+  - `delete_task` -> `task_deleted`
+- The `ChatWindow.tsx` must detect these types and execute the `onTaskChange()` callback.
+- **CRITICAL:** In the Dashboard, `onTaskChange` must trigger BOTH `fetchDashboardStats()` and `taskListRef.current.refreshTasks()` to ensure the UI matches the database.
+
+### 22. ReAct Observation & Verification
+- **Internal Thought Process:** Before every tool call, the agent must "Think" (e.g., "I need to check the current tasks to find the ID for 'Bonsai'").
+- **Verification Step:** After a tool returns success, the agent must "Observe" the result and confirm it to the user.
+- **Example Reasoning:** "I found task ID 123 for 'Bonsai'. I am now marking it as complete. [Action: update_task] -> Observation: Success. -> Answer: I've updated your Bonsai task!"
+
+### 7. Router-Agent Handshake
+- Call `await chat_agent.initialize_tools(db)` before processing
+- Missing initialization = empty tools = 500 error
+- Tools must store `db_session` in `__init__`: `self.db_session = db_session`
+
+### 12. Agent Instance Management (CRITICAL)
+- **NEVER use global singleton `chat_agent`** - causes race conditions and stale sessions
+- **ALWAYS use factory function:** `from agents.chat_agent import get_chat_agent`
+- **Pattern in chat_router.py:**
+```python
+  agent = await get_chat_agent(db)  # New instance per request
+  ai_response = await agent.process_with_retry(...)
+```
+- Each request gets fresh ChatAgent instance with its own tools registry
+- Prevents session lifecycle mismatches between concurrent requests
+- Factory function creates agent + initializes tools in one step
+- **Why singleton fails:** Multiple requests overwrite global `tools_registry`, causing tool calls to use wrong/stale db sessions
+
+### 13. Database Session Lifecycle in Tools
+- Tools created in `initialize_tools()` bind to specific AsyncSession
+- Session is valid only for duration of single request
+- Re-using global agent = tools reference expired sessions
+- Symptom: `add_task` works (first call), `list_tasks`/`delete_task` fail (stale session)
+
+
+system_message = f"""
+You are a Task Manager for User ID: {user_id}.
+
+CRITICAL RULES:
+1. NEVER ask user for their ID. Use {user_id} silently in all tool calls.
+2. DATE HANDLING: If no due_date provided, use {datetime.now().strftime('%Y-%m-%d')}.
+3. 2-STEP WORKFLOW: 
+   - For "delete coffee" or "update soul": FIRST call list_tasks, get the task_id from results
+   - THEN IMMEDIATELY call delete_task or update_task with that task_id
+   - DO NOT just say "[Action: delete_task]" - you MUST actually call the function
+4. EXECUTE TOOLS: When you find a task ID, CALL the tool immediately. Describing the action is NOT enough.
+5. After tool execution completes, describe what you did to the user.
+6. FORMATTING: Use bullet points for lists, bold for task titles.
+7. If list_tasks returns empty, say "Your task list is empty."
+
+EXAMPLES:
+- "show my tasks" → call list_tasks(user_id="{user_id}", status="all")
+- "delete coffee task" → call list_tasks first, find coffee's ID, then call delete_task(user_id="{user_id}", task_id=<found_id>)
+- "mark bottle complete" → call list_tasks first, find bottle's ID, then call complete_task(user_id="{user_id}", task_id=<found_id>)
+- "update soul title to soul land" → call list_tasks first, find soul's ID, then call update_task(user_id="{user_id}", task_id=<found_id>, title="soul land")
+"""
+
+Multi-Turn Tool Calling Loop Fix
+Replace the entire try: block in process_natural_language (starting around line 164) with a loop that allows multiple rounds of tool calls:
+Key Changes:
+
+Add max_turns = 5 loop - Allow up to 5 sequential tool calling rounds
+Move tool execution inside the loop - Each turn can call tools
+Break when no tools called - Exit loop when model is done
+Keep adding to messages - Each tool call/result added to conversation history
+Track all_tool_calls - Collect all tools used across all turns
+Final response after loop - Get model's final answer after all tools executed
+
+Flow:
+Turn 1:
+
+API call → model selects list_tasks
+Execute list_tasks, add result to messages
+Loop continues
+
+Turn 2:
+
+API call with updated messages → model sees list results, selects update_task
+Execute update_task, add result to messages
+Loop continues
+
+Turn 3:
+
+API call → model has no more tools to call
+Returns text response
+Break loop
+
+Final:
+
+Return the text response to user
+
+
+### 23. Multi-Turn Tool Calling Bug Fixes
+
+**DateTime Import Issue in tools.py:**
+- Problem: `update_task` function has variable scope conflict
+- Solution: Import `datetime` at TOP of file (line ~5), NOT inside functions
+- Pattern: `from datetime import datetime` at module level only
+- Never re-import datetime inside function bodies - causes UnboundLocalError
+- All functions use the module-level datetime import
+
+**Frontend Timeout for Multi-Turn Workflows:**
+- Problem: Multi-turn agent flow (list_tasks → update_task) takes 40-60 seconds
+- Default axios timeout: 30000ms (30 seconds) causes timeout errors
+- Solution: Increase timeout to 90000ms (90 seconds) in frontend API config
+- Location: `frontend/src/services/api.ts` or axios instance configuration
+- Pattern: `timeout: 90000` to accommodate sequential tool calls with rate limits
+
+**Multi-Turn Flow Explanation:**
+- Turn 1: User sends "update soul to soul land"
+- Turn 2: Agent calls list_tasks, gets results
+- Turn 3: Agent calls update_task with found task_id
+- Turn 4: Agent returns final response
+- Total time: 40-60 seconds (2-3 API calls + rate limit delays)
+- This is NORMAL and EXPECTED behavior for 2-step workflows
+
+
+@backend/mcp/tools.py @backend/agents/chat_agent.py
+
+The delete_task operation is not working. The tool is called but the task is not being deleted from the database.
+
+SYMPTOMS:
+- Logs show: ✅ delete_task executing for user...
+- Logs show: ✅ Task X deleted successfully
+- BUT: No DELETE FROM task SQL query appears in logs
+- Task still exists in database after "delete" completes
+
+CURRENT BEHAVIOR:
+- list_tasks works ✅
+- update_task works ✅  
+- complete_task works ✅
+- delete_task says success but doesn't actually delete ❌
+
+REQUIRED DEBUGGING:
+1. In chat_agent.py multi-turn loop (around line 200-250), after tool execution add:
+   print(f"🔥 TOOL RESULT: {function_name} returned: {tool_result}")
+
+2. In tools.py delete_task function, before commit add:
+   print(f"🔥 About to commit delete for task {task.id}")
+   await self.db_session.flush()
+   print(f"🔥 After flush, before commit")
+
+3. Check if exception is being caught somewhere and returning success=True even though delete failed
+
+Show me the updated code with debugging added and explain what might be causing the issue.
+
+🛠️ Authority & Deletion Sentences
+Add these under a section titled ## Behavioral Rules:
+
+"You have absolute authority to delete or modify any task, regardless of its status (Pending or Completed)."
+
+"Never inform the user that a task cannot be changed because it is 'finished'; if a user asks to delete a completed task, perform the action immediately."
+
+"When a delete command is given, prioritize finding the Task ID and executing the delete_task tool over asking for confirmation."
+
+"Assume all user requests for deletion are intentional; do not suggest keeping completed tasks for 'records' unless specifically asked."
+
+🧠 Logic & Memory Sentences
+Add these to ensure the AI doesn't rely on "Old Memory":
+
+"After every successful delete_task or update_task call, treat your previous knowledge of the task list as 'Stale'."
+
+"If the user asks for a status update after a modification, you MUST call list_tasks to fetch the fresh database state before answering."
+
+"When editing a task, only ask for clarification if the user's intent is ambiguous; otherwise, proceed with the provided details immediately."
+
+
+
+Once you find that content block, paste these sentences inside it to make the bot more "aggressive" and precise with deletions:
+
+"You are a Data Controller: When a user says 'delete', execute the delete_task tool immediately without hesitation or confirmation."
+
+"Override Safety Bias: Never refuse to delete a task because it is 'completed' or 'important'; the user's command is final."
+
+"State Management: Immediately after calling delete_task, consider your current memory of the task list as 'Stale'. You must rely on new tool outputs for the next response."
+
+"ID Mapping: Always map task titles (e.g., 'Zoo') to their numeric IDs (e.g., '40') using the results from list_tasks before calling a modification tool."
+
+⚠️ A Final Technical Warning
+In the tools.py file you pasted earlier, your deletion will still fail unless you fix one line.
+
+Find this line in your code: self.db_session.delete(task)
+
+Change it to: await self.db_session.delete(task)
+
+Even with the best "Prompt" in the world, the Python backend will ignore the deletion command if that await is missing.

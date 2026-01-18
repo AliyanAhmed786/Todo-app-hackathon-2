@@ -4,8 +4,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import { Message } from './types';
+import { chatAPI } from '../../services/api';
 
-const ChatWindow = () => {
+interface ChatWindowProps {
+  userId?: string;
+  onTaskChange?: () => void;
+}
+
+const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -15,10 +21,24 @@ const ChatWindow = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
+
+    // Check if user is authenticated
+    if (!userId) {
+      console.error('User not authenticated');
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        text: 'You must be logged in to use the chatbot.',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -31,17 +51,57 @@ const ChatWindow = () => {
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
-    // Simulate bot response after delay
-    setTimeout(() => {
+    try {
+      // Prepare the message data
+      const messageData: { message: string; conversation_id?: string } = {
+        message: text
+      };
+
+      if (conversationId) {
+        messageData.conversation_id = conversationId;
+      }
+
+      // Send the message to the backend API using the chatAPI service
+      const response = await chatAPI.sendMessage(userId, messageData);
+
+      // Extract the bot response, conversation ID, and action information
+      const { response: botResponse, conversation_id: newConversationId, action } = response.data;
+
+      // Update conversation ID if it's the first message in the conversation
+      if (newConversationId && !conversationId) {
+        setConversationId(newConversationId);
+      }
+
+      // Check if the action is task-related and trigger refresh callback
+      if (action && action.type && typeof action.type === 'string' && action.type.startsWith('task_') && onTaskChange) {
+        console.log('🔄 Task action detected:', action.type, 'Triggering task list refresh...');
+        onTaskChange(); // Trigger task list refresh when chat modifies tasks
+      }
+
+      // Add bot response to messages
       const botMessage: Message = {
         id: Date.now() + 1,
-        text: `I received your message: "${text}". How else can I assist you with your todos?`,
+        text: botResponse,
         sender: 'bot',
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+
+      // Add error message to the chat
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        text: 'Sorry, I encountered an error processing your request. Please try again.',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   // Scroll to bottom when messages change
