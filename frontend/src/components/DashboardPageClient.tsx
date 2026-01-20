@@ -185,7 +185,7 @@ export const DashboardPageClient: React.FC = () => {
           </div>
         </header>
 
-        <main className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="pt-22 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-3 text-base text-gray-600">Track and manage your tasks efficiently</p>
