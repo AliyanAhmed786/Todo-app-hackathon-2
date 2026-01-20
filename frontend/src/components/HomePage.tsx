@@ -220,21 +220,20 @@ export default async function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="relative mt-16 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-12">
-        <div className="absolute inset-0 bg-gradient-to-r from-coral-600/10 to-coral-400/10"></div>
-        <div className="container mx-auto px-6 relative z-10">
+      <footer className="relative mt-16 backdrop-blur-xl bg-white/40 border-t border-white/60 py-12 shadow-inner">
+        <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-6 md:mb-0 text-center md:text-left">
-              <h3 className="text-2xl font-bold gradient-text mb-2">Todo App</h3>
-              <p className="text-gray-400">Simplify your tasks, enhance your productivity</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Todo App</h3>
+              <p className="text-gray-600">Simplify your tasks, enhance your productivity</p>
             </div>
             <div className="flex space-x-8">
-              <Link href="/privacy" className="text-gray-400 hover:text-coral-400 transition-colors duration-200">Privacy</Link>
-              <Link href="/terms" className="text-gray-400 hover:text-coral-400 transition-colors duration-200">Terms</Link>
-              <Link href="/contact" className="text-gray-400 hover:text-coral-400 transition-colors duration-200">Contact</Link>
+              <span className="text-gray-600">Privacy</span>
+              <span className="text-gray-600">Terms</span>
+              <span className="text-gray-600">Contact</span>
             </div>
           </div>
-          <div className="mt-8 pt-6 border-t border-gray-700/50 text-center text-gray-500 text-sm">
+          <div className="mt-8 pt-6 border-t border-white/40 text-center text-gray-500 text-sm">
             © {new Date().getFullYear()} Todo App. All rights reserved.
           </div>
         </div>
