@@ -12,6 +12,7 @@ interface Task {
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
+  metaData?: any; // Preserve backend meta_data field for AI context
 }
 
 interface TaskListProps {
@@ -51,14 +52,15 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
       // Handle different response formats - API might return tasks in a 'tasks' property or directly as an array
       const tasksData = Array.isArray(response.data) ? response.data : (response.data.tasks || []);
       const transformedTasks = tasksData.map((task: any) => ({
-        id: String(task.id),
+        id: String(task.id), // Ensure ID remains as string for Better Auth compatibility
         title: task.title,
         description: task.description || '',
         completed: task.status,
-        priority: task.priority === 3 ? 'High' : task.priority === 1 ? 'Low' : 'Medium',
+        priority: task.priority === 3 ? 'High' : task.priority === 2 ? 'Medium' : 'Low', // Fixed mapping: 3=High, 2=Medium, 1=Low
         dueDate: task.due_date,
         createdAt: task.created_at,
-        updatedAt: task.updated_at
+        updatedAt: task.updated_at,
+        metaData: task.meta_data // Preserve backend meta_data field for AI context
       }));
       setTasks(transformedTasks);
     } catch (err: any) {
@@ -102,7 +104,8 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
         'Low': 1     // Backend expects Low = 1
       };
 
-      const response = await taskAPI.updateTask(Number(taskId), {
+      // Use string taskId for Better Auth compatibility (don't convert to Number)
+      const response = await taskAPI.updateTask(taskId, {
         title: task.title,
         description: task.description,
         status: !currentStatus,
@@ -114,9 +117,6 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
         task.id === taskId ? { ...task, completed: !currentStatus } : task
       ));
 
-      // Refresh tasks first, then immediately refresh stats
-      await fetchTasks();
-
       // CRITICAL: Pass updated tasks to parent for optimistic stats update
       if (onTaskChange) {
         onTaskChange(updatedTasks);
@@ -126,13 +126,23 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
       if (onTaskAction) {
         await onTaskAction();
       }
-    } catch (err) {
+    } catch (err: any) {
       // Rollback the optimistic update on error
       setTasks(tasks.map(task =>
         task.id === taskId ? { ...task, completed: currentStatus } : task
       ));
-      setError('Failed to update task. Please try again.');
+
+      // Set specific error message for 422 status (Unprocessable Entity)
+      if (err?.response?.status === 422) {
+        setError('ID type mismatch error. Please try again.');
+      } else {
+        setError('Failed to update task. Please try again.');
+      }
+
       console.error('Error toggling task completion:', err);
+
+      // Only refetch tasks on error to prevent UI flickering on success
+      await fetchTasks();
     }
   };
 
@@ -141,8 +151,8 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
       return;
     }
 
-    // Validate task ID before conversion
-    if (!taskId || isNaN(Number(taskId)) || Number(taskId) <= 0) {
+    // Validate task ID (keep as string for Better Auth compatibility)
+    if (!taskId) {
       console.error('Invalid task ID provided for deletion:', taskId);
       setError('Invalid task ID. Cannot delete task.');
       return;
@@ -151,13 +161,13 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
     // Diagnostic logging
     console.log('\n🗑️ DELETE ATTEMPT:');
     console.log('  Task ID:', taskId, '(type:', typeof taskId + ')');
-    console.log('  Task ID as number:', Number(taskId));
 
     // Keep reference for potential rollback
     const taskBeforeDelete = tasks.find(task => task.id === taskId);
 
     try {
-      const response = await taskAPI.deleteTask(Number(taskId));
+      // Use string taskId for Better Auth compatibility (don't convert to Number)
+      const response = await taskAPI.deleteTask(taskId);
       console.log('✅ DELETE SUCCESS:');
       console.log('  Status:', response.status);
       console.log('  Data:', response.data);
@@ -179,7 +189,13 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
       console.error('  Error Type:', err.code);
       console.error('  Task Existed:', !!taskBeforeDelete);
 
-      setError('Failed to delete task. Please try again.');
+      // Set specific error message for 422 status (Unprocessable Entity)
+      if (err?.response?.status === 422) {
+        setError('ID type mismatch error. Please try again.');
+      } else {
+        setError('Failed to delete task. Please try again.');
+      }
+
       console.error('Error deleting task:', err);
     }
   };
@@ -231,8 +247,8 @@ const TaskList = forwardRef<TaskListRef, TaskListProps>(({ onTaskChange, onTaskA
   };
 
   const handleTaskDelete = async (taskId: string) => {
-    // Validate task ID before processing
-    if (!taskId || isNaN(Number(taskId)) || Number(taskId) <= 0) {
+    // Validate task ID (keep as string for Better Auth compatibility)
+    if (!taskId) {
       console.error('Invalid task ID provided for deletion:', taskId);
       setError('Invalid task ID. Cannot delete task.');
       return;
