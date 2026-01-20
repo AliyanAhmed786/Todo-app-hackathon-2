@@ -28,14 +28,13 @@ class ChatAgent:
         """Initialize the chat agent with OpenAI client and tools."""
         # Initialize with openai api key and OpenRouter base URL as required by the skill file
         self.openai_client = AsyncOpenAI(
-            api_key=config.openai_api_key,  # Use openai_API_KEY from config
             base_url="https://openrouter.ai/api/v1",  # CRITICAL: This points to OpenRouter
             default_headers={
                 "HTTP-Referer": "http://localhost:3000", # Required for OpenRouter to track usage
                 "X-Title": "Todo App Hackathon",         # Shows your app name in OpenRouter logs
             }
         )
-        self.model = "meta-llama/llama-3.3-70b-instruct:free"  # A very fast, free model from OpenRouter
+        self.model = "openai/gpt-4o-mini"  # A very fast, free model from OpenRouter
         self.timeout = config.ai_operation_timeout
 
         # Initialize tools registry
@@ -166,6 +165,12 @@ LOGIC & MEMORY RULES:
 - State Management: Immediately after calling delete_task, consider your current memory of the task list as 'Stale'. You must rely on new tool outputs for the next response.
 - If the user asks for a status update after a modification, you MUST call list_tasks to fetch the fresh database state before answering.
 - When editing a task, only ask for clarification if the user's intent is ambiguous; otherwise, proceed with the provided details immediately.
+
+CONTEXT CONTINUITY RULES:
+- You are a context-aware assistant. Always review the provided conversation history before responding. If a user uses pronouns like 'it', 'that', or 'the task', refer to the most recently discussed task in the history to identify what they mean.
+- Maintain continuity with previous interactions. If the history shows a task was just created or modified, treat that as the 'active' task for any follow-up commands.
+- If there is existing conversation history, do not provide a welcome message. Respond directly to the user's latest input based on the previous context.
+- Before calling a tool like update_task or delete_task, verify the task_id against the information provided in the previous turns of the conversation.
 
 EXAMPLES:
 - "show my tasks" → call list_tasks(user_id="{{user_id}}", status="all")

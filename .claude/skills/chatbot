@@ -371,3 +371,93 @@ Find this line in your code: self.db_session.delete(task)
 Change it to: await self.db_session.delete(task)
 
 Even with the best "Prompt" in the world, the Python backend will ignore the deletion command if that await is missing.
+
+
+### 24. Chatbot Conversation Persistence with SessionStorage
+
+**Problem:** When user closes the chatbot UI (not refresh page), conversation history is lost. User wants conversations to persist across chatbot open/close within the same browser session.
+
+**Solution:** Use sessionStorage to persist conversation_id across chatbot component unmount/remount.
+
+**Implementation in ChatWindow.tsx:**
+
+1. **Save conversation_id when created:**
+   - After receiving conversation_id from backend API response
+   - Store in sessionStorage: `sessionStorage.setItem('chatbot_conversation_id', conversationId)`
+   
+2. **Load conversation_id on component mount:**
+   - Use useEffect hook that runs once on mount
+   - Retrieve saved ID: `const savedConversationId = sessionStorage.getItem('chatbot_conversation_id')`
+   - If exists, set it to state and optionally load message history from backend
+
+3. **Optional - Clear on new chat:**
+   - Add "New Chat" button that calls `sessionStorage.removeItem('chatbot_conversation_id')`
+   - Resets conversation state to start fresh
+
+**Behavior:**
+- Close chatbot → Reopen → Same conversation continues
+- Refresh page → Same conversation continues  
+- Close browser tab → Next session starts fresh
+- No old conversation clutter from previous sessions
+
+**Files to modify:** `frontend/src/components/chatbot-ui/ChatWindow.tsx`
+
+### 25. Load Conversation History from Backend
+
+**Problem:** SessionStorage persists conversation_id, but messages are not reloaded when chatbot reopens. User sees empty chat even though conversation exists.
+
+**Solution:** Fetch conversation history from backend when reopening chatbot with saved conversation_id.
+
+**Implementation in ChatWindow.tsx:**
+
+1. **Add loadConversationHistory function:**
+   - Create async function that accepts convId parameter
+   - Call backend API: `chatAPI.getConversationHistory(userId, convId)`
+   - Map response messages to frontend Message format
+   - Transform: backend msg.content → frontend text, msg.sender → 'user' or 'bot', msg.timestamp → Date object
+   - Update messages state with loaded history
+   - Add error handling with console.error
+
+2. **Update useEffect to call loadConversationHistory:**
+   - Modify existing useEffect (around line 26)
+   - After retrieving savedConversationId from sessionStorage
+   - Check if both savedConversationId AND userId exist
+   - Call loadConversationHistory(savedConversationId)
+   - Add userId to dependency array
+
+3. **Ensure API method exists in api.ts:**
+   - Verify chatAPI.getConversationHistory method exists
+   - Should call: GET `/api/{userId}/conversation/{conversationId}`
+   - Backend endpoint already exists in chat_router.py
+
+**Expected Behavior:**
+- Close chatbot → Reopen → Previous messages appear
+- Conversation continues seamlessly from where user left off
+- Empty chat only appears for truly new conversations
+
+**Files to modify:** 
+- `frontend/src/components/chatbot-ui/ChatWindow.tsx`
+- `frontend/src/services/api.ts` (if getConversationHistory method missing)
+
+
+Add these instructions to your chatbot's System Message (in your skill/config file):
+
+Context Continuity: "You are a context-aware assistant. Always review the provided conversation history before responding. If a user uses pronouns like 'it', 'that', or 'the task', refer to the most recently discussed task in the history to identify what they mean."
+
+Persistent State: "Maintain continuity with previous interactions. If the history shows a task was just created or modified, treat that as the 'active' task for any follow-up commands."
+
+No Redundant Introductions: "If there is existing conversation history, do not provide a welcome message. Respond directly to the user's latest input based on the previous context."
+
+Tool-History Alignment: "Before calling a tool like update_task or delete_task, verify the task_id against the information provided in the previous turns of the conversation."
+
+In api/chat_router.py, locate the get_conversation_history function. The current implementation is causing a PydanticSerializationError because it tries to access msg.metadata, which conflicts with SQLAlchemy's internal MetaData object.
+
+Please rewrite the function to manually format the messages into a list of dictionaries. Specifically:
+
+Ensure timestamp is converted using .isoformat().
+
+Change the key metadata to meta_data.
+
+Set meta_data to an empty dictionary {} for each message to avoid serialization crashes.
+
+Ensure the returned JSON includes conversation_id, created_at, updated_at, and the messages list.

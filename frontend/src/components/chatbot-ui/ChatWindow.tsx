@@ -24,6 +24,57 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Load conversation ID from sessionStorage on component mount
+  useEffect(() => {
+    const savedConversationId = sessionStorage.getItem('chatbot_conversation_id');
+    if (savedConversationId) {
+      setConversationId(savedConversationId);
+
+      // Load message history from backend if both userId and conversationId exist
+      if (userId && savedConversationId) {
+        loadConversationHistory(savedConversationId);
+      }
+    }
+  }, [userId]); // Add userId to dependency array
+
+  // Function to load conversation history from backend
+  const loadConversationHistory = async (convId: string) => {
+    if (!userId) {
+      console.error('Cannot load conversation history: User not authenticated');
+      return;
+    }
+
+    try {
+      console.log('Loading conversation history for ID:', convId);
+
+      // Call backend API to get conversation history
+      const response = await chatAPI.getConversationHistory(userId, convId);
+
+      // Map response messages to frontend Message format
+      const backendMessages = response.data.messages || [];
+      const frontendMessages: Message[] = backendMessages.map((msg: any, index: number) => ({
+        id: msg.id || Date.now() + index,
+        text: msg.content || msg.text || '',
+        sender: msg.sender === 'user' ? 'user' : 'bot',
+        timestamp: new Date(msg.timestamp || msg.created_at || Date.now()),
+      }));
+
+      // Update messages state with loaded history
+      setMessages(prevMessages => {
+        // Only update if we have new messages to avoid flickering
+        if (frontendMessages.length > 0) {
+          return frontendMessages;
+        }
+        return prevMessages;
+      });
+
+      console.log('Loaded', frontendMessages.length, 'messages from conversation history');
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+      // Don't reset messages on error, just log the issue
+    }
+  };
+
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
@@ -67,9 +118,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
       // Extract the bot response, conversation ID, and action information
       const { response: botResponse, conversation_id: newConversationId, action } = response.data;
 
-      // Update conversation ID if it's the first message in the conversation
-      if (newConversationId && !conversationId) {
+      // Update conversation ID if it's received from the backend
+      if (newConversationId) {
         setConversationId(newConversationId);
+        // Save conversation ID to sessionStorage for persistence across chatbot open/close
+        sessionStorage.setItem('chatbot_conversation_id', newConversationId);
       }
 
       // Check if the action is task-related and trigger refresh callback
@@ -104,6 +157,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
     }
   };
 
+  // Function to start a new conversation
+  const handleNewChat = () => {
+    // Clear the conversation ID from sessionStorage
+    sessionStorage.removeItem('chatbot_conversation_id');
+    // Reset conversation ID state
+    setConversationId(null);
+    // Reset messages to initial state
+    setMessages([
+      {
+        id: 1,
+        text: 'Hello! I\'m your Todo Assistant. How can I help you today?',
+        sender: 'bot',
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,12 +183,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
     <div className="flex flex-col h-full max-w-md mx-auto max-h-[70vh]">
       {/* Chat Header */}
       <div className="backdrop-blur-2xl bg-white/40 border border-white/60 rounded-t-3xl p-4 mb-0">
-        <div className="flex items-center space-x-3">
-          <div className="w-3 h-3 bg-coral-600 rounded-full"></div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Todo Assistant</h2>
-            <p className="text-xs text-gray-600">Online • Ready to help</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-coral-600 rounded-full"></div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Todo Assistant</h2>
+              <p className="text-xs text-gray-600">Online • Ready to help</p>
+            </div>
           </div>
+          <button
+            onClick={handleNewChat}
+            className="text-xs bg-white/60 hover:bg-white/80 px-2 py-1 rounded-md transition-colors"
+            title="Start new conversation"
+          >
+            New Chat
+          </button>
         </div>
       </div>
 

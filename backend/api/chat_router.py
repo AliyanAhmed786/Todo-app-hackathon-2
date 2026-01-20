@@ -205,7 +205,7 @@ async def get_conversation_history(
                 "sender": msg.sender,
                 "content": msg.content,
                 "timestamp": msg.timestamp.isoformat(),
-                "metadata": msg.metadata
+                "meta_data": {}  # Changed from metadata to meta_data to avoid PydanticSerializationError
             })
 
         return {
