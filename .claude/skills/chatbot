@@ -461,3 +461,55 @@ Change the key metadata to meta_data.
 Set meta_data to an empty dictionary {} for each message to avoid serialization crashes.
 
 Ensure the returned JSON includes conversation_id, created_at, updated_at, and the messages list.
+
+
+### 26. Block Batch Operations - Single Task Only
+
+**Problem:** When user says "delete all tasks" or "complete all tasks", chatbot errors or behaves randomly. We want to PREVENT batch operations entirely - chatbot should only work on ONE task at a time.
+
+**Solution:** Update system prompt to reject batch operations and enforce single-task workflow.
+
+**Implementation in chat_agent.py:**
+
+**Add these rules to system_message (around line 150, in CRITICAL RULES section):**
+```
+SINGLE TASK OPERATION RULES (MANDATORY):
+- You can ONLY operate on ONE task at a time. Batch operations are NOT supported.
+- If user says "delete all tasks", respond: "I can only delete one task at a time. Please tell me which specific task you'd like to delete."
+- If user says "complete all tasks", respond: "I can only mark one task as complete at a time. Which task would you like to mark complete?"
+- If user says "update all tasks", respond: "I can only update one task at a time. Which task would you like to update?"
+- NEVER call delete_task or update_task or complete_task multiple times in sequence
+- NEVER loop through task lists to perform operations on each one
+- Always require user to specify a SINGLE task by name or ID
+
+REJECTION PATTERNS - Respond with clarification request:
+- "delete all" → "Please specify which single task to delete"
+- "remove everything" → "I can only delete one task at a time. Which one?"
+- "complete all pending" → "Which specific task would you like to mark complete?"
+- "mark all done" → "Please tell me one task to mark complete"
+- "update all priorities" → "I can only update one task. Which task?"
+
+ACCEPTED PATTERNS - Single task operations only:
+- "delete coffee task" → ✅ Allowed
+- "complete the bottle task" → ✅ Allowed  
+- "update soul to soul land" → ✅ Allowed
+- "mark zoo as done" → ✅ Allowed
+- "delete task ID 39" → ✅ Allowed
+
+EXCEPTION - List viewing is allowed:
+- "show all tasks" → ✅ Call list_tasks (viewing is okay)
+- "list everything" → ✅ Call list_tasks (viewing is okay)
+```
+
+**Expected Behavior:**
+
+**User:** "delete all tasks"
+**Chatbot:** "I can only delete one task at a time. Please tell me which specific task you'd like to delete, or say 'show all tasks' to see your task list first."
+
+**User:** "complete all pending tasks"  
+**Chatbot:** "I can only mark one task as complete at a time. Which task would you like to complete?"
+
+**User:** "delete coffee"
+**Chatbot:** [Calls list_tasks → Calls delete_task for coffee only] ✅
+
+**Files to modify:** `backend/agents/chat_agent.py`
