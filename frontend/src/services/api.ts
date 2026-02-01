@@ -122,12 +122,12 @@ export const taskAPI = {
   },
 
   // Get a specific task
-  getTask: async (taskId: number): Promise<AxiosResponse> => {
+  getTask: async (taskId: string | number): Promise<AxiosResponse> => {
     return api.get(`/api/tasks/${taskId}`);
   },
 
   // Update a task with optimistic locking
-  updateTask: async (taskId: number, taskData: {
+  updateTask: async (taskId: string | number, taskData: {
     title?: string;
     description?: string;
     status?: boolean;
@@ -139,9 +139,12 @@ export const taskAPI = {
   },
 
   // Delete a task
-  deleteTask: async (taskId: number): Promise<AxiosResponse> => {
+  deleteTask: async (taskId: string | number): Promise<AxiosResponse> => {
     // Validate task ID
-    if (!Number.isInteger(taskId) || taskId <= 0) {
+    if (typeof taskId === 'number' && (!Number.isInteger(taskId) || taskId <= 0)) {
+      throw new Error(`Invalid task ID: ${taskId}. Task ID must be a positive integer.`);
+    }
+    if (typeof taskId === 'string' && (!/^\d+$/.test(taskId) || parseInt(taskId) <= 0)) {
       throw new Error(`Invalid task ID: ${taskId}. Task ID must be a positive integer.`);
     }
     return api.delete(`/api/tasks/${taskId}`);

@@ -1,0 +1,118 @@
+# ID Type Mismatch Issue Analysis
+
+## Issue Summary
+The application experiences "ID type mismatch" errors (HTTP 422 Unprocessable Entity) when performing task operations (update, delete) due to inconsistent handling of task IDs between frontend and backend systems.
+
+## Root Cause Analysis
+
+### Frontend Behavior
+- **TaskList.tsx**: Task IDs are explicitly converted to strings for Better Auth compatibility
+  ```tsx
+  id: String(task.id), // Ensure ID remains as string for Better Auth compatibility
+  ```
+- **API Calls**: Frontend passes string task IDs to API functions
+  ```tsx
+  await taskAPI.updateTask(taskId, {...}) // taskId is string
+  await taskAPI.deleteTask(taskId) // taskId is string
+  ```
+
+### Backend Expectations
+- **Models**: Task.id is defined as `int` in SQLModel
+  ```python
+  id: Optional[int] = Field(default=None, primary_key=True)
+  ```
+- **API Endpoints**: Path parameters expect integer task IDs
+  ```python
+  @router.put("/{task_id}", ...)
+  async def update_task_endpoint(..., task_id: int = Path(...), ...)
+  
+  @router.delete("/{task_id}")
+  async def delete_task_endpoint(..., task_id: int = Path(...), ...)
+  ```
+- **Response Schema**: TaskResponse returns `id: int`
+
+### API Layer Inconsistency
+- **api.ts**: Task API functions are typed to expect `number` parameters
+  ```typescript
+  updateTask: async (taskId: number, ...)
+  deleteTask: async (taskId: number, ...)
+  ```
+- **Validation**: deleteTask includes runtime validation for integer IDs
+  ```typescript
+  if (!Number.isInteger(taskId) || taskId <= 0) {
+    throw new Error(`Invalid task ID: ${taskId}. Task ID must be a positive integer.`);
+  }
+  ```
+
+## Error Flow
+1. Backend returns task with `id: 1` (integer)
+2. Frontend converts to `id: "1"` (string) for Better Auth compatibility
+3. User performs update/delete operation with string ID `"1"`
+4. Frontend API layer receives string but expects number
+5. For `deleteTask`: Validation fails immediately with custom error
+6. For `updateTask`: No validation, request sent to backend
+7. Backend FastAPI attempts to convert path parameter `"1"` to `int` - succeeds
+8. However, 422 errors occur due to other validation issues or type mismatches in request body
+
+## Specific Error Handling
+TaskList.tsx includes specific handling for 422 errors:
+```tsx
+if (err?.response?.status === 422) {
+  setError('ID type mismatch error. Please try again.');
+}
+```
+
+## Additional Issues Identified
+
+### 1. Duplicate Delete Functions
+- `deleteTask()`: Direct deletion from UI button
+- `handleTaskDelete()`: Deletion from modal
+- Both functions exist but serve similar purposes, potentially causing confusion
+
+### 2. Race Condition Handling
+- `consolidateUpdates()` function suggests previous race condition issues
+- Multiple async operations updating the same state
+
+### 3. Inconsistent Error Messages
+- Frontend shows "ID type mismatch error" for 422 status
+- Backend may return different validation errors
+
+## Recommended Solutions
+
+### Primary Fix: Consistent ID Type Handling
+1. **Option A: Convert at API Boundary (Recommended)**
+   - Modify `api.ts` taskAPI functions to accept `string` taskId
+   - Convert to `number` internally for URL construction
+   ```typescript
+   updateTask: async (taskId: string, taskData: {...}) => {
+     const numericId = parseInt(taskId, 10);
+     return api.put(`/api/tasks/${numericId}`, taskData);
+   }
+   ```
+
+2. **Option B: Convert at Component Level**
+   - Convert string IDs to numbers before API calls in components
+   ```tsx
+   await taskAPI.updateTask(Number(taskId), {...})
+   ```
+
+3. **Option C: Backend Accepts String IDs**
+   - Modify backend to accept string task_id parameters
+   - Convert to int internally in service layer
+
+### Secondary Fixes
+1. **Remove Duplicate Functions**: Consolidate delete logic into single function
+2. **Improve Error Handling**: More specific error messages based on actual backend response
+3. **Add Type Guards**: Runtime validation for ID conversions
+
+## Implementation Priority
+1. Fix ID type conversion in API layer (Option A)
+2. Remove duplicate delete functions
+3. Enhance error handling and user feedback
+4. Add comprehensive type checking
+
+## Testing Requirements
+- Verify task creation, update, delete with various ID formats
+- Test error scenarios and user feedback
+- Validate race condition fixes
+- Ensure Better Auth compatibility maintained

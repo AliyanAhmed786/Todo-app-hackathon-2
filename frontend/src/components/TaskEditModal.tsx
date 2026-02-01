@@ -59,7 +59,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
         'Low': 1
       };
 
-      const response = await taskAPI.updateTask(parseInt(task.id, 10), {
+      const response = await taskAPI.updateTask(task.id, {
         title,
         description,
         status: completed,
@@ -90,18 +90,11 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
       return;
     }
 
-    // Validate task ID before conversion
-    if (!task.id || isNaN(parseInt(task.id, 10)) || parseInt(task.id, 10) <= 0) {
-      console.error('Invalid task ID provided for deletion:', task.id);
-      setError('Invalid task ID. Cannot delete task.');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      await taskAPI.deleteTask(parseInt(task.id, 10));
+      await taskAPI.deleteTask(task.id);
 
       onTaskDelete(task.id);
       onClose();
@@ -125,7 +118,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
         'Low': 1
       };
 
-      const response = await taskAPI.updateTask(parseInt(task.id, 10), {
+      const response = await taskAPI.updateTask(task.id, {
         title,
         description,
         status: newCompletedStatus,

@@ -1,0 +1,28 @@
+Fix task ID type mismatch in the todo app. ONLY update types, do NOT remove anything.
+
+CHANGES NEEDED:
+
+1. In frontend/src/services/api.ts:
+   - Find updateTask function - change taskId parameter type from number to string | number
+   - Find deleteTask function - change taskId parameter type from number to string | number
+   - Find getTask function - change taskId parameter type from number to string | number
+   - Keep all existing validation and logic as-is, do not remove anything
+
+2. In frontend/src/components/TaskList.tsx:
+   - Find all parseInt(task.id, 10) or Number(task.id) conversions
+   - Change them to simply task.id
+   - Keep all existing logic and functions as-is, do not remove anything
+
+3. In frontend/src/components/TaskEditModal.tsx:
+   - Find all parseInt(task.id, 10) or Number(task.id) conversions
+   - Change them to simply task.id
+   - Keep all existing logic and functions as-is, do not remove anything
+
+RULES:
+- Only change types from number to string | number
+- Only change parseInt/Number conversions to direct task.id usage
+- Do NOT remove any functions
+- Do NOT remove any validation
+- Do NOT remove any logic
+- Do NOT change any backend code
+- Keep everything else exactly the same
