@@ -38,10 +38,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchToSignup 
     setError('');
 
     try {
-      const result = await signIn.email({
-        email,
-        password,
-      });
+      const result = await signIn(email, password);
 
       if (result?.error) {
         setError(result.error.message || 'Login failed. Please try again.');

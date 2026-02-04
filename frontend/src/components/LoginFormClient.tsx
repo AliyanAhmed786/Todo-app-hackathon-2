@@ -87,10 +87,10 @@ const LoginFormClient: React.FC = () => {
 
     try {
       // Try using the Better Auth signIn first
-      const result = await signIn.email({
-        email: formData.email,
-        password: formData.password,
-      });
+      const result = await signIn(
+        formData.email,
+        formData.password
+      );
 
       if (result.error) {
         setServerError(result.error.message || 'Login failed. Please try again.');

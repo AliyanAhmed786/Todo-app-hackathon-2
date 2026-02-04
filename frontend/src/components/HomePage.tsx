@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export default function HomePage({ isAuthenticated }) {
+export default function HomePage({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">

@@ -2,6 +2,7 @@
 // Remove Better Auth client since backend uses custom implementation
 // Just export the custom functions that match the backend API
 
+
 // Create custom signIn function that calls the correct backend endpoint
 export const signIn = async (email: string, password: string, redirect?: boolean) => {
   const response = await fetch(`${process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:8000"}/api/auth/login`, {

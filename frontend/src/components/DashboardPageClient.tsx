@@ -18,7 +18,7 @@ const DynamicTaskList = dynamic(() => import('./TaskList'), {
 
 export const DashboardPageClient: React.FC = () => {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, status } = authClient.useSession();
   const taskListRef = useRef<TaskListRef>(null);
   const [user, setUser] = useState<{ id: string; name?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,7 @@ export const DashboardPageClient: React.FC = () => {
 
   useEffect(() => {
     // Handle pending state
-    if (isPending) {
+    if (status === 'loading') {
       setLoading(true);
       return;
     }
@@ -122,7 +122,7 @@ export const DashboardPageClient: React.FC = () => {
       router.push('/login');
       return;
     }
-  }, [session, isPending, router, fetchDashboardStats]); // Include session and isPending in dependencies
+  }, [session, router, fetchDashboardStats]); // Removed isPending from dependencies
 
   const handleLogout = async () => {
     try {
