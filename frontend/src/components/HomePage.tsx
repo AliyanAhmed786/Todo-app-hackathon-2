@@ -1,9 +1,6 @@
 import Link from 'next/link';
-import { isServerAuthenticated } from '../lib/auth';
 
-export default async function HomePage() {
-  // Check if user is authenticated server-side
-  const isAuthenticated = await isServerAuthenticated();
+export default function HomePage({ isAuthenticated }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">

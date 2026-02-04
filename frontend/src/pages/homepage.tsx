@@ -1,9 +1,7 @@
 import Link from 'next/link';
-import { isServerAuthenticated } from '../lib/auth';
 
-export default async function HomePage() {
-  // Check if user is authenticated server-side
-  const isAuthenticated = await isServerAuthenticated();
+export default function HomePage({ isAuthenticated }) {
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -180,5 +178,31 @@ export async function generateMetadata() {
   return {
     title: 'Todo App - Organize Your Tasks, Simplify Your Life',
     description: 'A beautiful and intuitive task management application designed to help you stay organized and productive.',
+  };
+}
+
+// Server-side rendering to check authentication status
+export async function getServerSideProps(context) {
+  // Get the session token from cookies
+  const { req } = context;
+  const cookies = req.headers.cookie || '';
+
+  // Parse the cookies to find the session token
+  const cookiePairs = cookies.split(';');
+  let sessionToken = null;
+
+  for (const pair of cookiePairs) {
+    const [key, value] = pair.trim().split('=');
+    if (key === 'better-auth.session_token') {
+      sessionToken = value;
+      break;
+    }
+  }
+
+  // Return props with authentication status
+  return {
+    props: {
+      isAuthenticated: !!sessionToken,
+    },
   };
 }

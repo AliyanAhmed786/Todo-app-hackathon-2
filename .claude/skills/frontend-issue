@@ -1,0 +1,24 @@
+# Frontend Build Error Fix - Next.js Pages Router Compatibility
+
+## Issue
+Build failing with error: "You're importing a component that needs 'next/headers'. That only works in a Server Component which is not supported in the pages/ directory."
+
+## Task
+Fix the `frontend/src/lib/auth.ts` file to be compatible with Next.js Pages Router by removing server-side imports.
+
+## Solution Steps
+1. Open `frontend/src/lib/auth.ts`
+2. Remove the line: `import { cookies } from 'next/headers';`
+3. Remove or comment out the entire `getServerToken()` function
+4. Replace with client-side cookie reading using `document.cookie`
+5. Search the entire `frontend/src` directory for any imports of `getServerToken` and replace them with client-side alternatives
+
+## Code Template
+Replace the current auth.ts content with client-side only implementation:
+- Use `document.cookie` instead of `next/headers`
+- Only export client-side functions
+- Ensure no server-side Next.js APIs are imported
+
+## Validation
+After changes:
+1. Ensure no files import `getServerToken` from auth.ts
