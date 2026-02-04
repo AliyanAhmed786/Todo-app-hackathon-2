@@ -146,7 +146,31 @@ export function useSession() {
   return session;
 }
 
+// Imperative getSession function for use in components that need to fetch session data imperatively
+export async function getSession() {
+  try {
+    const response = await fetch(`${process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:8000"}/api/auth/session`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookies
+    });
+
+    const data = await response.json();
+
+    return {
+      user: data.user || null,
+      authenticated: !!data.user
+    };
+  } catch (error) {
+    console.error('Session fetch error:', error);
+    return {
+      user: null,
+      authenticated: false
+    };
+  }
+}
+
 // Export authClient for compatibility
 export const authClient = {
-  useSession: useSession
+  useSession: useSession,
+  getSession: getSession
 };

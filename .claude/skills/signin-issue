@@ -1,0 +1,7 @@
+Centralized Source of Truth: By updating the authClient.ts library file (Choice A), you create a single point of definition for your authentication logic. This means if the backend endpoint or cookie requirements change, you only have to update one file rather than hunting through every page component.
+
+TypeScript Schema Synchronization: Choice A resolves the "Property does not exist" type error globally. By adding getSession to the authClient object's exported type definition, you satisfy the TypeScript compiler's safety checks across the entire project, preventing future build failures on other pages.
+
+Preservation of Component Logic: Fixing the library allows you to keep the existing "imperative" logic in your dashboard (using await). This avoids a complex refactor of the DashboardPageClient.tsx into a "declarative" hook-based pattern, which would be time-consuming and prone to "Rules of Hooks" errors.
+
+Reusability and Scalability: Adding getSession to the client utility ensures that any future features—such as protected profile pages or settings—can immediately utilize the same authClient.getSession() method without rewriting the manual fetch boilerplate and environment variable logic.
