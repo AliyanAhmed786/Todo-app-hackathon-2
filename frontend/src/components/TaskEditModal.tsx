@@ -64,7 +64,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
         description,
         status: completed,
         priority: priorityMap[priority],
-        due_date: dueDate
+        // due_date: dueDate
       });
 
       onTaskUpdate({
@@ -123,7 +123,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
         description,
         status: newCompletedStatus,
         priority: priorityMap[priority],
-        due_date: dueDate
+        // due_date: dueDate
       });
 
       onTaskUpdate({
