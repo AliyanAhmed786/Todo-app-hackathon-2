@@ -1,0 +1,23 @@
+Fix the 6 critical errors identified in the 'Frontend Lib Directory Analysis Report' to align with our Backend implementation:
+
+Variable Sync: In frontend/src/lib/config.ts, change NEXT_PUBLIC_API_URL to NEXT_PUBLIC_API_BASE_URL so it matches our .env files.
+
+Auth Alignment: Refactor auth.ts and authClient.ts. Remove the JWT/jwtDecode logic. Align them to use the 'Better Auth' session approach used in the backend.
+
+Endpoint Fix: Update authClient.ts to call the correct backend endpoints (check api/auth_router.py in the backend to see the real paths).
+
+Axios/Server Fix: In api.ts, fix the 'use server' axios instance conflict so it works in both Server and Client components.
+
+Path Verification: After fixing the code, verify the file names (case-sensitivity) so Vercel stops giving the 'Module not found' error.
+
+
+Fix the authentication context issue in frontend/src/lib/api.ts:
+
+Cookie Forwarding: In the serverApiCall and getServerApiOptions functions, ensure that cookies retrieved via import { cookies } from 'next/headers' are explicitly added to the headers of the fetch request.
+
+Header Mapping: Use const cookieStore = await cookies(); and set the Cookie header in the fetch options to cookieStore.toString().
+
+JSON Handling: Ensure all fetch calls have 'Content-Type': 'application/json' and that the response is properly awaited before calling .json().
+
+Standardize: Make sure the backend URL is pulled correctly from process.env.NEXT_PUBLIC_API_BASE_URL.
+
