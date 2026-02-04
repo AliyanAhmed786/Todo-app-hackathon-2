@@ -1,0 +1,28 @@
+SPEC: Phase IV - Docker + Kubernetes Deployment for Todo Chatbot App
+
+PROJECT STRUCTURE:
+- backend/ (FastAPI + OpenAI chatbot)
+- frontend/ (Next.js)
+- Database: Neon PostgreSQL (external, no container needed)
+
+REQUIREMENTS:
+1. Create Dockerfile for backend (python:3.11-slim)
+2. Create Dockerfile for frontend (node:18-alpine, multi-stage build)
+3. Create .dockerignore for both
+4. Create docker-compose.yml in root
+5. Create .env file in root
+6. Create k8s/ folder with Kubernetes deployment files
+7. Create Helm chart in helm/todo-app/
+
+CONSTRAINTS:
+- Limited storage - keep images minimal
+- Windows + Docker Desktop
+- Use Docker Desktop Kubernetes (NOT Minikube)
+- Neon DB is external - no database container
+- Backend port: 8000
+- Frontend port: 3000
+
+ENVIRONMENT VARIABLES NEEDED:
+- DATABASE_URL (Neon DB URL)
+- OPENAI_API_KEY
+- NEXT_PUBLIC_API_BASE_URL

@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -78,10 +79,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Dynamic CORS origins
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+).split(",")
+
 # Add CORSMiddleware FIRST to ensure CORS headers are applied even if other middleware fails
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],  # Allow specific origins for development
+    allow_origins=allowed_origins,  # Dynamic!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -167,4 +174,5 @@ async def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

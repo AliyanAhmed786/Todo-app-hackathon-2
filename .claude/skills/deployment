@@ -1,0 +1,146 @@
+# DeveloperWeek 2026 Hackathon - Koyeb/Vercel Deployment Fix
+
+## Purpose
+This skill guides Claude to fix critical deployment blockers for a FastAPI backend (Koyeb) and Next.js frontend (Vercel) during the DeveloperWeek 2026 Kilo Challenge hackathon.
+
+## Context
+- **Backend**: FastAPI with Better Auth, running `python main.py`
+- **Frontend**: Next.js
+- **Target Platforms**: Backend → Koyeb (Docker), Frontend → Vercel
+- **Critical Issues**: Hardcoded ports, localhost-only CORS, hardcoded environment URLs
+
+## Critical Fixes Required
+
+### Fix 1: Backend Port Handling (backend/main.py)
+
+**Problem**: Hardcoded `port=8000` will conflict with Koyeb's dynamic `$PORT` assignment.
+
+**Solution**:
+1. Ensure `import os` exists at top of file
+2. Update the `if __name__ == "__main__":` block (around line 169):
+```python
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+```
+
+### Fix 2: Dynamic CORS Configuration (backend/main.py)
+
+**Problem**: CORS only allows localhost origins, blocking all Vercel requests.
+
+**Solution**:
+1. Ensure `import os` exists at top of file
+2. Replace the hardcoded CORS middleware (around line 81-89) with:
+```python
+# Dynamic CORS origins
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+).split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,  # Dynamic!
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Access-Control-Allow-Origin", "Set-Cookie"],
+)
+```
+
+### Fix 3: Production Dockerfile (backend/Dockerfile)
+
+**Problem**: Current CMD uses shell variable interpolation instead of exec form.
+
+**Solution**: Replace entire Dockerfile with:
+```dockerfile
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE ${PORT:-8000}
+
+CMD ["python", "main.py"]
+```
+
+### Fix 4: Frontend Environment Configuration
+
+**Problem**: Hardcoded localhost URL won't work on Vercel.
+
+**Solution**:
+
+1. Keep `frontend/.env` for local development:
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+2. Create `frontend/.env.production` for production:
+```env
+NEXT_PUBLIC_API_BASE_URL=https://YOUR_KOYEB_BACKEND_URL
+```
+
+## Deployment Environment Variables
+
+### Koyeb Backend Settings
+Set these in Koyeb dashboard:
+```
+ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main.vercel.app
+DATABASE_URL=your_postgres_connection_string
+PORT=(auto-assigned by Koyeb, don't set manually)
+```
+
+### Vercel Frontend Settings
+Set these in Vercel dashboard:
+```
+NEXT_PUBLIC_API_BASE_URL=https://your-backend-app.koyeb.app
+```
+
+## Execution Order
+
+When user asks to fix deployment issues:
+
+1. **First**: Fix `backend/main.py` (port + CORS)
+2. **Second**: Fix `backend/Dockerfile`
+3. **Third**: Create `frontend/.env.production`
+4. **Fourth**: Remind user to set environment variables in Koyeb and Vercel dashboards
+5. **Fifth**: Verify local dev still works: `python main.py` should run on port 8000
+
+## Validation Checklist
+
+After applying fixes, verify:
+- [ ] `import os` exists in `backend/main.py`
+- [ ] Port uses `os.getenv("PORT", 8000)` 
+- [ ] CORS uses `allowed_origins` variable from env
+- [ ] Dockerfile uses `CMD ["python", "main.py"]` exec form
+- [ ] `frontend/.env.production` exists
+- [ ] No hardcoded `localhost:8000` or `localhost:3000` in production configs
+
+## Common Pitfalls to Avoid
+
+1. **Don't remove `EXPOSE` from Dockerfile** - it's documentation for Docker
+2. **Don't use shell form in CMD** - use exec form `["python", "main.py"]`
+3. **Don't forget trailing commas in CORS origins** - environment variables are comma-separated
+4. **Don't set PORT manually in Koyeb** - it's auto-assigned
+5. **Don't skip `.env.production`** - Vercel needs it for build-time variables
+
+## Success Criteria
+
+- Backend runs locally with `python main.py` on port 8000
+- Backend accepts dynamic PORT from Koyeb in production
+- CORS allows both localhost (dev) and Vercel domains (prod)
+- Frontend can connect to backend in both environments
+- No hardcoded URLs remain in production configs
