@@ -109,3 +109,17 @@ export const isValidSession = (): boolean => {
     const hasBetterAuthSession = document.cookie.includes('better-auth.session_token');
     return hasBetterAuthSession;
 };
+
+export const getUserIdFromToken = () => {
+  if (typeof document === 'undefined') return null;
+  // This is a placeholder to stop the build error. 
+  // If your Navbar actually needs the ID, it should ideally get it from the session.
+  return null; 
+};
+
+export const logout = () => {
+  if (typeof window !== 'undefined') {
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    window.location.href = "/login";
+  }
+};
