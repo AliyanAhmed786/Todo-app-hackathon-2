@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
-from secure import Secure
 from utils.websocket_manager import sio_app
 import httpx
 
