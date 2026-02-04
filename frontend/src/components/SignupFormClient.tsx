@@ -107,13 +107,13 @@ const SignupFormClient: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const result = await signUp.email({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-      });
+      const result = await signUp(
+        formData.email,
+        formData.password,
+        formData.name,
+      ) as { error?: string | { message?: string; detail?: string } | any } | undefined;
 
-      if (result.error) {
+      if (result?.error) {
         // Handle both string errors and object errors from backend
         let errorMessage = 'Signup failed. Please try again.';
         if (typeof result.error === 'string') {

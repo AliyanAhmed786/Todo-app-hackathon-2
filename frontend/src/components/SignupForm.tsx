@@ -54,10 +54,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitchToLogi
     setError('');
 
     try {
-      const result = await signUp.email({
-        email,
-        password,
-      });
+      const result = await signUp('User', email, password);
 
       if (result?.error) {
         setError(result.error.message || 'Signup failed. Please try again.');
