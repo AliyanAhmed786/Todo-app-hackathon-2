@@ -52,8 +52,11 @@ export const measureDashboardPerformance = (): PerformanceMetrics => {
   }
 
   return {
+    // @ts-ignore - navigationStart is legacy but often still present at runtime
     navigationStart: navigation?.navigationStart || 0,
+    // @ts-ignore
     loadEventEnd: navigation?.loadEventEnd || 0,
+    // @ts-ignore
     domContentLoaded: navigation?.domContentLoadedEventEnd || 0,
     firstPaint: paint.find(entry => entry.name === 'first-paint')?.startTime || 0,
     firstContentfulPaint: paint.find(entry => entry.name === 'first-contentful-paint')?.startTime || 0,
