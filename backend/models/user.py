@@ -102,6 +102,15 @@ class UserCreate(UserBase):
     """
     password: str
 
+    @field_validator('password', mode='before')
+    @classmethod
+    def validate_password_length(cls, v):
+        if v is None:
+            return v
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot exceed 72 bytes')
+        return v
+
 class UserUpdate(SQLModel):
     """
     Schema for updating user information.
@@ -115,6 +124,15 @@ class UserLogin(SQLModel):
     """
     email: str
     password: str
+
+    @field_validator('password', mode='before')
+    @classmethod
+    def validate_password_length(cls, v):
+        if v is None:
+            return v
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot exceed 72 bytes')
+        return v
 
 class UserPublic(UserBase):
     """

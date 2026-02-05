@@ -29,6 +29,13 @@ async def register_user(
     Register a new user with Better Auth database session validation.
     """
     try:
+        # Validate password length before creating user
+        if len(user_in.password.encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=400,
+                detail="Password too long (max 72 bytes)"
+            )
+
         # Validate the request data
         validated_user = UserCreate.model_validate(user_in.model_dump())
 
@@ -129,6 +136,13 @@ async def login_user(
     Login an existing user with Better Auth database session validation.
     """
     try:
+        # Validate password length before authenticating
+        if len(user_credentials.password.encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=400,
+                detail="Password too long (max 72 bytes)"
+            )
+
         # Validate the request data
         validated_credentials = UserLogin.model_validate(user_credentials.model_dump())
 
