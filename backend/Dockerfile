@@ -10,13 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Fix: Copy from backend directory
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Fix: Copy entire backend directory
 COPY backend/ .
 
-EXPOSE ${PORT:-8000}
+# Hugging Face uses port 7860 by default
+EXPOSE 7860
 
-CMD ["python", "main.py"]
+# Use the PORT env var that Hugging Face provides
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-7860}
