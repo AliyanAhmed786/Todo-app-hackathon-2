@@ -9,10 +9,11 @@ export const signIn = async (email: string, password: string, redirect?: boolean
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json', // Added for content negotiation
     },
-    credentials: 'include', // Important for cookies
+    credentials: 'include',
     body: JSON.stringify({
-      email: email,
+      email: email.trim().toLowerCase(), // Normalized
       password: password
     }),
   });
@@ -40,11 +41,12 @@ export const signUp = async (name: string, email: string, password: string, redi
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json', // Added for consistency
     },
-    credentials: 'include', // Important for cookies
+    credentials: 'include',
     body: JSON.stringify({
       name: name,
-      email: email,
+      email: email.trim().toLowerCase(), // Normalized
       password: password
     }),
   });
