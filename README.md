@@ -1,3 +1,18 @@
+---
+title: Todo Backend API
+emoji: ✅
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+# Multi-User Web Todo Application (Phase II)
+... (rest of your text)
+
+
+
 # Multi-User Web Todo Application (Phase II)
 
 A multi-user web todo application with authentication, task management, and responsive UI built with Next.js, FastAPI, and Neon PostgreSQL.
