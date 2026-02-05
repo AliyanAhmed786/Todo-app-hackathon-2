@@ -6,6 +6,7 @@ import uuid
 from pydantic import field_validator
 from pydantic.networks import EmailStr
 from models.conversation import Conversation
+from models.task import Task
 
 def sanitize_input(text: str) -> str:
     """

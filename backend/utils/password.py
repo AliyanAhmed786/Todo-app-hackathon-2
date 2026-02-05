@@ -12,8 +12,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """
-    Generate a hash for the given password.
+    Generate a hash for the given password with 72-byte safety check.
     """
+    if len(password.encode('utf-8')) > 72:
+        raise ValueError("Password exceeds bcrypt 72-byte limit")
     return pwd_context.hash(password)
 
 def verify_and_update_password(plain_password: str, hashed_password: str) -> Tuple[bool, Optional[str]]:

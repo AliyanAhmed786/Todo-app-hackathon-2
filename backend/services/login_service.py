@@ -28,6 +28,11 @@ async def login_user(*, db_session: AsyncSession, email: str, password: str) -> 
     Returns:
         Tuple[User, Session]: The authenticated user and session objects, or (None, None) if authentication failed
     """
+    # Bcrypt has a 72-byte limit. We check this before anything else.
+    if len(password.encode('utf-8')) > 72:
+        logger.warning(f"Login failed: Password exceeds 72 bytes for {email}")
+        return None, None
+
     # Authenticate the user
     user = await authenticate_user(
         db_session=db_session,

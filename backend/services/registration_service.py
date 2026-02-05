@@ -26,8 +26,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """
-    Generate a hash for a plain password.
+    Generate a hash for a plain password with 72-byte safety check.
     """
+    if len(password.encode('utf-8')) > 72:
+        raise ValueError("Password exceeds bcrypt 72-byte limit")
     return pwd_context.hash(password)
 
 
@@ -45,6 +47,13 @@ async def register_user(*, db_session: AsyncSession, user_in: UserCreate) -> Use
     Raises:
         ValueError: If the email is already taken
     """
+    # --- ADD THIS GUARD CLAUSE START ---
+    # Bcrypt has a 72-byte limit. We check this before anything else.
+    if len(user_in.password.encode('utf-8')) > 72:
+        logger.warning(f"Registration failed: Password exceeds 72 bytes for {user_in.email}")
+        raise ValueError("Password cannot be longer than 72 bytes")
+    # --- ADD THIS GUARD CLAUSE END ---
+
     # Check if user with this email already exists
     result = await db_session.exec(
         select(User).where(User.email == user_in.email.lower())
