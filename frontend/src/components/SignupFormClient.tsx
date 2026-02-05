@@ -108,9 +108,9 @@ const SignupFormClient: React.FC = () => {
 
     try {
       const result = await signUp(
+        formData.name,
         formData.email,
         formData.password,
-        formData.name,
       ) as { error?: string | { message?: string; detail?: string } | any } | undefined;
 
       if (result?.error) {
