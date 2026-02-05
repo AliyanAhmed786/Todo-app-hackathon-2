@@ -53,16 +53,14 @@ class UserBase(SQLModel):
 
     @field_validator('email', mode='before')
     @classmethod
-    def validate_and_sanitize_email(cls, v):
+    def validate_email_length(cls, v):
         if not v:
             return v
-        # Sanitize the email
-        sanitized = sanitize_input(v)
         # Additional validation - basic email format check
-        if len(sanitized) > 200:
+        if len(v) > 200:
             raise ValueError('Email must be no more than 200 characters')
         # The EmailStr field type will handle email format validation automatically
-        return sanitized.lower().strip()
+        return v.lower().strip()
 
 class User(UserBase, table=True):
     """
@@ -103,13 +101,15 @@ class UserCreate(UserBase):
     """
     password: str
 
-    @field_validator('password', mode='before')
+    @field_validator('password')
     @classmethod
-    def validate_password_length(cls, v):
-        if v is None:
+    def validate_password_length(cls, v: str):
+        if not v:
             return v
-        if len(v.encode('utf-8')) > 72:
-            raise ValueError('Password cannot exceed 72 bytes')
+        # Measure bytes, not just characters
+        byte_length = len(v.encode('utf-8'))
+        if byte_length > 72:
+            raise ValueError(f'Password is too long ({byte_length} bytes). Max is 72.')
         return v
 
 class UserUpdate(SQLModel):
@@ -126,13 +126,15 @@ class UserLogin(SQLModel):
     email: str
     password: str
 
-    @field_validator('password', mode='before')
+    @field_validator('password')
     @classmethod
-    def validate_password_length(cls, v):
-        if v is None:
+    def validate_password_length(cls, v: str):
+        if not v:
             return v
-        if len(v.encode('utf-8')) > 72:
-            raise ValueError('Password cannot exceed 72 bytes')
+        # Measure bytes, not just characters
+        byte_length = len(v.encode('utf-8'))
+        if byte_length > 72:
+            raise ValueError(f'Password is too long ({byte_length} bytes). Max is 72.')
         return v
 
 class UserPublic(UserBase):
