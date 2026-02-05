@@ -24,6 +24,8 @@ class UserCreateRequest(BaseModel):
     def validate_password(cls, v):
         if not v or len(v) < 8:
             raise ValueError('Password must be at least 8 characters long')
+        if len(v.encode('utf-8')) > 72:  # ADD THIS LINE
+            raise ValueError('Password cannot exceed 72 bytes')  # ADD THIS LINE
         return v
 
 class UserLoginRequest(BaseModel):
