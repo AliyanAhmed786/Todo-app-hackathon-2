@@ -2,7 +2,7 @@
 title: Todo Backend API
 emoji: ✅
 colorFrom: blue
-colorTo: indigo
+colorTo: yellow
 sdk: docker
 app_port: 7860
 pinned: false
