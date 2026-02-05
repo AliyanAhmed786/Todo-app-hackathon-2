@@ -327,7 +327,7 @@ const SignupFormClient: React.FC = () => {
               className="w-4 h-4 rounded mt-1 accent-coral-600 cursor-pointer"
             />
             <label htmlFor="agreeToTerms" className="text-xs text-gray-600">
-              I agree to <Link href="/terms" className="text-coral-600 hover:text-coral-700 underline">Terms of Service</Link> and <Link href="/privacy" className="text-coral-600 hover:text-coral-700 underline">Privacy Policy</Link>
+              {/* I agree to <Link href="/terms" className="text-coral-600 hover:text-coral-700 underline">Terms of Service</Link> and <Link href="/privacy" className="text-coral-600 hover:text-coral-700 underline">Privacy Policy</Link> */}
             </label>
           </div>
 
