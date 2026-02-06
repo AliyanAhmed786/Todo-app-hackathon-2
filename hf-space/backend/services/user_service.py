@@ -12,6 +12,10 @@ async def create_user(*, db_session: AsyncSession, user_in: UserCreate) -> User:
     """
     Create a new user with Better Auth database session validation approach.
     """
+    # Check password length BEFORE hashing
+    if len(user_in.password.encode('utf-8')) > 72:
+        raise ValidationError("Password cannot exceed 72 bytes")
+    
     # Check if user with this email already exists
     result = await db_session.exec(select(User).where(User.email == user_in.email.lower()))
     existing_user = result.first()
@@ -46,6 +50,10 @@ async def authenticate_user(*, db_session: AsyncSession, email: str, password: s
     Authenticate a user by email and password.
     Returns the user if authentication is successful, None otherwise.
     """
+    # Check password length BEFORE bcrypt
+    if len(password.encode('utf-8')) > 72:
+        return None
+    
     # Get user by email
     result = await db_session.exec(select(User).where(User.email == email.lower()))
     user = result.first()
