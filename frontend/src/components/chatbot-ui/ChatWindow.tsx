@@ -15,7 +15,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: 'Hello! I\'m your Todo Assistant. How can I help you today?',
+      text: "Hello! I'm your Todo Assistant. How can I help you today?",
       sender: 'bot',
       timestamp: new Date(),
     },
@@ -24,20 +24,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load conversation ID from sessionStorage on component mount
+  // Initialize conversation for new or existing users
   useEffect(() => {
-    const savedConversationId = sessionStorage.getItem('chatbot_conversation_id');
-    if (savedConversationId) {
-      setConversationId(savedConversationId);
+    const initializeConversation = async () => {
+      if (!userId) return;
 
-      // Load message history from backend if both userId and conversationId exist
-      if (userId && savedConversationId) {
+      let savedConversationId = sessionStorage.getItem('chatbot_conversation_id');
+
+      if (savedConversationId) {
+        setConversationId(savedConversationId);
         loadConversationHistory(savedConversationId);
-      }
-    }
-  }, [userId]); // Add userId to dependency array
+      } else {
+        try {
+          // Create a new conversation by sending an init message
+          const response = await chatAPI.sendMessage(userId, { message: 'init' });
+          const newConversationId = response.data.conversation_id;
 
-  // Function to load conversation history from backend
+          if (newConversationId) {
+            setConversationId(newConversationId);
+            sessionStorage.setItem('chatbot_conversation_id', newConversationId);
+
+            // Optionally load empty history for consistency
+            loadConversationHistory(newConversationId);
+          }
+        } catch (err) {
+          console.error('Error initializing conversation for new user:', err);
+        }
+      }
+    };
+
+    initializeConversation();
+  }, [userId]);
+
+  // Load conversation history from backend
   const loadConversationHistory = async (convId: string) => {
     if (!userId) {
       console.error('Cannot load conversation history: User not authenticated');
@@ -46,11 +65,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
 
     try {
       console.log('Loading conversation history for ID:', convId);
-
-      // Call backend API to get conversation history
       const response = await chatAPI.getConversationHistory(userId, convId);
 
-      // Map response messages to frontend Message format
       const backendMessages = response.data.messages || [];
       const frontendMessages: Message[] = backendMessages.map((msg: any, index: number) => ({
         id: msg.id || Date.now() + index,
@@ -59,122 +75,91 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
         timestamp: new Date(msg.timestamp || msg.created_at || Date.now()),
       }));
 
-      // Update messages state with loaded history
-      setMessages(prevMessages => {
-        // Only update if we have new messages to avoid flickering
-        if (frontendMessages.length > 0) {
-          return frontendMessages;
-        }
-        return prevMessages;
-      });
-
+      setMessages((prevMessages) => (frontendMessages.length > 0 ? frontendMessages : prevMessages));
       console.log('Loaded', frontendMessages.length, 'messages from conversation history');
     } catch (error) {
       console.error('Error loading conversation history:', error);
-      // Don't reset messages on error, just log the issue
     }
   };
 
-const handleSendMessage = async (text: string) => {
-  if (!text.trim()) return;
+  // Handle sending a message
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
 
-  // userId is now guaranteed to exist, but add defensive check
-  if (!userId || userId.trim() === '') {
-    console.error('User ID is missing or empty');
-    const errorMessage: Message = {
-      id: Date.now() + 1,
-      text: 'Authentication error. Please refresh the page.',
-      sender: 'bot',
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, errorMessage]);
-    return;
-  }
+    if (!userId || userId.trim() === '') {
+      console.error('User ID is missing or empty');
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        text: 'Authentication error. Please refresh the page.',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now(),
       text,
       sender: 'user',
       timestamp: new Date(),
     };
-
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
     try {
-      // Prepare the message data
-      const messageData: { message: string; conversation_id?: string } = {
-        message: text
-      };
+      const messageData: { message: string; conversation_id?: string } = { message: text };
+      if (conversationId) messageData.conversation_id = conversationId;
 
-      if (conversationId) {
-        messageData.conversation_id = conversationId;
-      }
-
-      // Send the message to the backend API using the chatAPI service
       const response = await chatAPI.sendMessage(userId, messageData);
-
-      // Extract the bot response, conversation ID, and action information
       const { response: botResponse, conversation_id: newConversationId, action } = response.data;
 
-      // Update conversation ID if it's received from the backend
       if (newConversationId) {
         setConversationId(newConversationId);
-        // Save conversation ID to sessionStorage for persistence across chatbot open/close
         sessionStorage.setItem('chatbot_conversation_id', newConversationId);
       }
 
-      // Check if the action is task-related and trigger refresh callback
-      if (action && action.type && typeof action.type === 'string' && action.type.startsWith('task_') && onTaskChange) {
+      if (action && action.type && action.type.startsWith('task_') && onTaskChange) {
         console.log('🔄 Task action detected:', action.type, 'Triggering task list refresh...');
-        onTaskChange(); // Trigger task list refresh when chat modifies tasks
+        onTaskChange();
       }
 
-      // Add bot response to messages
       const botMessage: Message = {
         id: Date.now() + 1,
         text: botResponse,
         sender: 'bot',
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-
-      // Add error message to the chat
       const errorMessage: Message = {
         id: Date.now() + 1,
         text: 'Sorry, I encountered an error processing your request. Please try again.',
         sender: 'bot',
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  // Function to start a new conversation
+  // Start a new conversation
   const handleNewChat = () => {
-    // Clear the conversation ID from sessionStorage
     sessionStorage.removeItem('chatbot_conversation_id');
-    // Reset conversation ID state
     setConversationId(null);
-    // Reset messages to initial state
     setMessages([
       {
         id: 1,
-        text: 'Hello! I\'m your Todo Assistant. How can I help you today?',
+        text: "Hello! I'm your Todo Assistant. How can I help you today?",
         sender: 'bot',
         timestamp: new Date(),
       },
     ]);
   };
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
@@ -204,12 +189,7 @@ const handleSendMessage = async (text: string) => {
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto max-h-[calc(70vh-10rem)] p-4 space-y-4 bg-white/20 backdrop-blur-xl border-x border-white/60">
         {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            text={message.text}
-            sender={message.sender}
-            timestamp={message.timestamp}
-          />
+          <MessageBubble key={message.id} text={message.text} sender={message.sender} timestamp={message.timestamp} />
         ))}
 
         {isTyping && (
