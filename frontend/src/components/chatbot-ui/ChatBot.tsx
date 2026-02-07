@@ -21,7 +21,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ isOpen: propIsOpen, onClose, position
     return (
       <div className={`fixed ${position} z-50 w-full max-w-md`}>
         <div className="backdrop-blur-2xl bg-white/40 border border-white/60 rounded-3xl shadow-xl shadow-gray-900/10 overflow-hidden">
-          <ChatWindow userId={userId} onTaskChange={onTaskChange} />
+          <ChatWindow userId={userId || ''} onTaskChange={onTaskChange} />
         </div>
       </div>
     );
@@ -68,7 +68,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ isOpen: propIsOpen, onClose, position
                 </svg>
               </button>
             </div>
-            <ChatWindow userId={userId} onTaskChange={onTaskChange} />
+            <ChatWindow userId={userId || ''} onTaskChange={onTaskChange} />
           </div>
         </div>
       )}

@@ -7,7 +7,7 @@ import { Message } from './types';
 import { chatAPI } from '../../services/api';
 
 interface ChatWindowProps {
-  userId?: string;
+  userId: string;
   onTaskChange?: () => void;
 }
 
@@ -75,21 +75,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, onTaskChange }) => {
     }
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+const handleSendMessage = async (text: string) => {
+  if (!text.trim()) return;
 
-    // Check if user is authenticated
-    if (!userId) {
-      console.error('User not authenticated');
-      const errorMessage: Message = {
-        id: Date.now() + 1,
-        text: 'You must be logged in to use the chatbot.',
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      return;
-    }
+  // userId is now guaranteed to exist, but add defensive check
+  if (!userId || userId.trim() === '') {
+    console.error('User ID is missing or empty');
+    const errorMessage: Message = {
+      id: Date.now() + 1,
+      text: 'Authentication error. Please refresh the page.',
+      sender: 'bot',
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+    return;
+  }
 
     // Add user message
     const userMessage: Message = {
