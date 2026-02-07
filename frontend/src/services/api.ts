@@ -155,17 +155,17 @@ export const taskAPI = {
 export const chatAPI = {
   // Send a message in a conversation
   sendMessage: async (userId: string, messageData: { message: string; conversation_id?: string }): Promise<AxiosResponse> => {
-    return api.post(`/api/chat/conversation`, messageData);
+    return api.post(`/api/chat/${userId}/conversation`, messageData);
   },
 
   // Get conversation history
   getConversationHistory: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
-    return api.get(`/api/chat/conversation/${conversationId}`);
+    return api.get(`/api/chat/${userId}/conversation/${conversationId}`);
   },
 
   // Delete a conversation
   deleteConversation: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
-    return api.delete(`/api/chat/conversation/${conversationId}`);
+    return api.delete(`/api/chat/${userId}/conversation/${conversationId}`);
   },
 };
 
