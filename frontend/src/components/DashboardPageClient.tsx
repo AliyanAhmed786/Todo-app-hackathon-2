@@ -374,6 +374,7 @@ export const DashboardPageClient: React.FC = () => {
         {user && (
   <ChatBot
     position="bottom-24 right-8"
+    userId={user.id}  // ← REQUIRED!
     onTaskChange={async () => {
       try {
         await fetchDashboardStats();
