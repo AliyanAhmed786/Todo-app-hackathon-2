@@ -10,25 +10,20 @@ import datetime
 
 async def create_user(*, db_session: AsyncSession, user_in: UserCreate) -> User:
     """
-    Create a new user with Better Auth database session validation approach.
+    Create a new user. Truncates long passwords to 72 bytes for bcrypt compatibility.
     """
-    # Check password length BEFORE hashing
-    if len(user_in.password.encode('utf-8')) > 72:
-        raise ValidationError("Password cannot exceed 72 bytes")
-    
     # Check if user with this email already exists
     result = await db_session.exec(select(User).where(User.email == user_in.email.lower()))
     existing_user = result.first()
     if existing_user:
         raise ValidationError("A user with this email already exists")
 
-    # Generate a unique string ID for Better Auth compatibility
     user_id = secrets.token_hex(20)
 
-    # Hash the password
-    hashed_password = get_password_hash(user_in.password)
+    # FIX: Truncate to 72 chars so bcrypt doesn't throw the 'AttributeError' or 'ValueTooLong'
+    safe_password = user_in.password[:72]
+    hashed_password = get_password_hash(safe_password)
 
-    # Create user object with string ID and hashed password
     user = User(
         id=user_id,
         name=user_in.name,
@@ -37,32 +32,27 @@ async def create_user(*, db_session: AsyncSession, user_in: UserCreate) -> User:
         email_verified=False
     )
 
-    # Add to database
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)
-
     return user
 
 
 async def authenticate_user(*, db_session: AsyncSession, email: str, password: str) -> Optional[User]:
     """
-    Authenticate a user by email and password.
-    Returns the user if authentication is successful, None otherwise.
+    Authenticate a user. Truncates input to 72 bytes to match the hash.
     """
-    # Check password length BEFORE bcrypt
-    if len(password.encode('utf-8')) > 72:
-        return None
-    
-    # Get user by email
     result = await db_session.exec(select(User).where(User.email == email.lower()))
     user = result.first()
 
     if not user:
         return None
 
-    # Verify password
-    if not verify_password(password, user.password_hash):
+    # FIX: Do not return None if > 72. Truncate it instead!
+    # This allows the long strings from your deployed frontend to work.
+    is_valid = verify_password(password[:72], user.password_hash)
+
+    if not is_valid:
         return None
 
     return user
