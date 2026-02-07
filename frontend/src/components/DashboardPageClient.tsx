@@ -371,18 +371,20 @@ export const DashboardPageClient: React.FC = () => {
         </main>
 
         {/* ChatBot Component - Positioned to avoid overlapping with New Task button */}
-        <ChatBot
-          position="bottom-24 right-8"
-          userId={user?.id}
-          onTaskChange={async () => {
-            // CRITICAL: Trigger both dashboard stats refresh AND task list refresh
-            // to ensure the UI matches the database (per requirement 21)
-            await fetchDashboardStats();
-            if (taskListRef.current) {
-              await taskListRef.current.refreshTasks();
-            }
-          }}
-        />
+        {user && (
+  <ChatBot
+    position="bottom-24 right-8"
+    userId={user.id}  // ← REQUIRED!
+    onTaskChange={async () => {
+      try {
+        await fetchDashboardStats();
+        await taskListRef.current?.refreshTasks();
+      } catch (err) {
+        console.error('Error updating tasks from chatbot:', err);
+      }
+    }}
+  />
+)}
       </div>
     </ErrorBoundary>
   );
