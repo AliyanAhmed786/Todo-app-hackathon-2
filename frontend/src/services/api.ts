@@ -9,7 +9,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 90000, // 90 seconds to accommodate multi-turn workflows
+  timeout: 90000, // 90 seconds to accommodate multi-turn workflows (list_tasks -> update_task) taking 40-60 seconds
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,9 +19,11 @@ const api = axios.create({
 // Request interceptor to log requests
 api.interceptors.request.use(
   async (config) => {
+    // Log the request for debugging
     console.debug('Making API request:', config.method?.toUpperCase(), config.url, {
       hasBetterAuthCookie: document.cookie.includes('better-auth.session_token')
     });
+
     return config;
   },
   (error) => {
@@ -33,10 +35,12 @@ api.interceptors.request.use(
 // Response interceptor to handle authentication errors
 api.interceptors.response.use(
   (response) => {
+    // Log successful responses for debugging
     console.debug('API response received:', response.config.method?.toUpperCase(), response.config.url, response.status);
     return response;
   },
   (error) => {
+    // Log error responses for debugging
     console.error('API error occurred:', {
       method: error.config?.method?.toUpperCase(),
       url: error.config?.url,
@@ -45,8 +49,10 @@ api.interceptors.response.use(
       data: error.response?.data
     });
 
+    // Handle authentication errors (401 Unauthorized, 403 Forbidden)
     if (isAuthError(error)) {
       console.error('Authentication error occurred:', error.response?.status, error.response?.data);
+      // Redirect to login and clear cookies
       if (typeof window !== 'undefined') {
         redirectToLogin();
       }
@@ -55,31 +61,43 @@ api.interceptors.response.use(
   }
 );
 
+
 // Check if running in browser environment
 const isBrowser = (): boolean => {
   return typeof window !== 'undefined';
 };
 
+
 // Authentication API functions
 export const authAPI = {
+  // Register a new user
   register: async (name: string, email: string, password: string): Promise<AxiosResponse> => {
     return api.post('/api/auth/signup', { name, email, password });
   },
+
+  // Login user
   login: async (email: string, password: string): Promise<AxiosResponse> => {
     return api.post('/api/auth/login', { email, password });
   },
+
+  // Refresh access token using refresh token
   refresh: async (refreshToken: string): Promise<AxiosResponse> => {
     return api.post('/api/auth/refresh', { refresh_token: refreshToken });
   },
+
+  // Logout user (client-side only)
   logout: async (): Promise<AxiosResponse> => {
     const response = await api.post('/api/auth/logout');
+    // Clear JWT token from localStorage
     localStorage.removeItem('access_token');
     return response;
   },
 };
 
+
 // Dashboard API functions
 export const dashboardAPI = {
+  // Get dashboard statistics
   getStats: async (): Promise<AxiosResponse> => {
     return api.get('/api/dashboard/stats');
   },
@@ -87,9 +105,12 @@ export const dashboardAPI = {
 
 // Task API functions
 export const taskAPI = {
+  // Get user's tasks
   getTasks: async (): Promise<AxiosResponse> => {
     return api.get('/api/tasks/');
   },
+
+  // Create a new task
   createTask: async (taskData: {
     title: string;
     description?: string;
@@ -99,9 +120,13 @@ export const taskAPI = {
   }): Promise<AxiosResponse> => {
     return api.post('/api/tasks/', taskData);
   },
+
+  // Get a specific task
   getTask: async (taskId: string | number): Promise<AxiosResponse> => {
     return api.get(`/api/tasks/${taskId}`);
   },
+
+  // Update a task with optimistic locking
   updateTask: async (taskId: string | number, taskData: {
     title?: string;
     description?: string;
@@ -112,7 +137,10 @@ export const taskAPI = {
   }): Promise<AxiosResponse> => {
     return api.put(`/api/tasks/${taskId}`, taskData);
   },
+
+  // Delete a task
   deleteTask: async (taskId: string | number): Promise<AxiosResponse> => {
+    // Validate task ID
     if (typeof taskId === 'number' && (!Number.isInteger(taskId) || taskId <= 0)) {
       throw new Error(`Invalid task ID: ${taskId}. Task ID must be a positive integer.`);
     }
@@ -126,17 +154,17 @@ export const taskAPI = {
 // Chat API functions
 export const chatAPI = {
   // Send a message in a conversation
-  sendMessage: async (userId: string, messageData: { message: string; conversation_id?: string; }): Promise<AxiosResponse> => {
+  sendMessage: async (userId: string, messageData: { message: string; conversation_id?: string }): Promise<AxiosResponse> => {
     return api.post(`/api/chat/conversation`, messageData);
   },
 
   // Get conversation history
-  getConversationHistory: async (conversationId: string, convId: string): Promise<AxiosResponse> => {
+  getConversationHistory: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
     return api.get(`/api/chat/conversation/${conversationId}`);
   },
 
   // Delete a conversation
-  deleteConversation: async (conversationId: string): Promise<AxiosResponse> => {
+  deleteConversation: async (userId: string, conversationId: string): Promise<AxiosResponse> => {
     return api.delete(`/api/chat/conversation/${conversationId}`);
   },
 };
